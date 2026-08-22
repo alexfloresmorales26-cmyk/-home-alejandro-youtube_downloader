@@ -34,9 +34,9 @@ youtube_downloader/
 
 ## 🚀 Instalación y Uso Rápido
 
-1. **Abrir la terminal en la carpeta:**
+1. **Abrir la terminal en la carpeta del proyecto:**
    ```bash
-   cd /home/alejandro/.gemini/antigravity/scratch/youtube_downloader
+   cd youtube_downloader
    ```
 
 2. **Instalar dependencias:**
