@@ -1,0 +1,28 @@
+# Entornos virtuales
+venv/
+env/
+ENV/
+.env
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Carpeta y archivos de descargas
+downloads/
+*.mp4
+*.mp3
+*.m4a
+*.webm
+*.mkv
+*.part
+*.ytdl
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
