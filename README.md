@@ -1,19 +1,32 @@
-# 🎬 Descargador Avanzado de YouTube en Python
+# 🎬 Descargador de YouTube Profesional (Web & CLI)
 
-Herramienta completa, modular y 100% en código abierto Python para descargar videos, pistas de audio en múltiples formatos, miniaturas, subtítulos y listas de reproducción completas de YouTube utilizando [`yt-dlp`](https://github.com/yt-dlp/yt-dlp).
+Aplicación web moderna y herramienta de línea de comandos en Python para descargar videos, audios en MP3/M4A/WAV, miniaturas y listas de reproducción de YouTube en alta definición.
 
 ---
 
-## ✨ Funcionalidades Principales
+## 🌟 Dos Formas de Usarlo
 
-- 🎥 **Descarga de Videos**: Máxima resolución (4K, 1080p, 720p, 480p) en formato MP4.
-- 🎵 **Extracción de Audio**: Formatos MP3, M4A, WAV y FLAC.
-- 📋 **Listas de Reproducción (Playlists)**: Descarga carpetas completas y ordenadas por número de pista.
-- 🖼️ **Miniaturas (Thumbnails)**: Descarga de la portada del video en máxima resolución.
-- 💬 **Subtítulos**: Descarga de subtítulos en español e inglés (.vtt / .srt).
-- 📊 **Progreso en Tiempo Real**: Barra visual con porcentaje, tamaño descargado, velocidad y tiempo estimado (ETA).
-- 🎨 **Interfaz de Consola Estilizada**: Menú interactivo a color y soporte de comandos CLI.
-- 🔄 **Detección Automática de FFmpeg**: Modo compatible sin fallos si FFmpeg no está instalado.
+### 1. 🌐 Modo Página Web (Para ti y para compartir con otros)
+Ejecuta el servidor web con un solo comando:
+```bash
+python3 app.py
+```
+Abre tu navegador en: **`http://localhost:5000`**
+
+#### ✨ Características de la Web:
+- 🔍 **Buscador con Previsualización**: Pega el enlace y mira la portada, autor, vistas y duración al instante.
+- 🎚️ **Selector de Calidad**: 1080p, 720p, 480p, 360p (MP4).
+- 🎵 **Extracción de Audio**: MP3 (192 kbps), M4A, WAV, FLAC.
+- 🖼️ **Descarga de Portadas**: Obtén la miniatura original en máxima resolución.
+- 📱 **Diseño Responsivo**: Funciona en computadoras, tablets y teléfonos móviles.
+
+---
+
+### 2. 💻 Modo Consola / Terminal (CLI)
+Si prefieres usarlo directamente desde la terminal:
+```bash
+python3 main.py
+```
 
 ---
 
@@ -21,80 +34,31 @@ Herramienta completa, modular y 100% en código abierto Python para descargar vi
 
 ```text
 youtube_downloader/
-├── .gitignore          # Ignora entornos virtuales y carpeta de descargas
-├── README.md           # Guía completa de uso e instalación
-├── requirements.txt    # Librerías necesarias (yt-dlp)
-├── downloader.py       # Motor de descargas con soporte para video, audio, subs y playlists
-├── main.py             # Menú interactivo estilizado y CLI
-├── test_downloader.py  # Suite de pruebas unitarias
-└── downloads/          # Directorio donde se guardan los archivos descargados
+├── app.py                # Servidor Web (Flask / HTTP nativo)
+├── main.py               # Menú interactivo por consola
+├── downloader.py         # Motor de descarga con yt-dlp
+├── templates/
+│   └── index.html        # Página web con diseño moderno y Tailwind CSS
+├── static/
+│   ├── css/styles.css    # Estilos visuales
+│   └── js/app.js         # Lógica interactiva del frontend
+├── requirements.txt      # Dependencias (flask, yt-dlp, gunicorn)
+└── downloads/            # Carpeta donde se guardan las descargas
 ```
 
 ---
 
-## 🚀 Instalación y Uso Rápido
+## ☁️ ¿Cómo publicarlo en internet para que cualquiera pueda usarlo?
 
-1. **Abrir la terminal en la carpeta del proyecto:**
-   ```bash
-   cd youtube_downloader
-   ```
+Puedes subirlo **gratis** a la nube en menos de 2 minutos usando **Render** o **Railway**:
 
-2. **Instalar dependencias:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Ejecutar el menú interactivo:**
-   ```bash
-   python3 main.py
-   ```
-
----
-
-## 💻 Opciones de Línea de Comandos (CLI)
-
-También puedes usar el script directamente desde la terminal o integrarlo en otros programas:
-
-- **Descargar video en máxima calidad:**
-  ```bash
-  python3 main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-  ```
-
-- **Descargar video en resolución específica (ej. 1080p):**
-  ```bash
-  python3 main.py -r 1080p "https://www.youtube.com/watch?v=VIDEO_ID"
-  ```
-
-- **Descargar audio en formato MP3:**
-  ```bash
-  python3 main.py -a --format mp3 "https://www.youtube.com/watch?v=VIDEO_ID"
-  ```
-
-- **Descargar una lista de reproducción completa en video:**
-  ```bash
-  python3 main.py -p "https://www.youtube.com/playlist?list=PLAYLIST_ID"
-  ```
-
-- **Descargar solo la miniatura (Thumbnail):**
-  ```bash
-  python3 main.py -t "https://www.youtube.com/watch?v=VIDEO_ID"
-  ```
-
-- **Descargar subtítulos:**
-  ```bash
-  python3 main.py -s "https://www.youtube.com/watch?v=VIDEO_ID"
-  ```
-
-- **Definir carpeta de guardado personalizada:**
-  ```bash
-  python3 main.py -o ~/MisVideos "https://www.youtube.com/watch?v=VIDEO_ID"
-  ```
-
----
-
-## 🧪 Ejecutar Pruebas Unitarias
-
-Para comprobar el correcto funcionamiento de las funciones y formateadores:
-```bash
-python3 -m unittest test_downloader.py
-```
+### Despliegue en Render (Gratis):
+1. Sube tu proyecto a GitHub.
+2. Entra a [render.com](https://render.com) y crea una cuenta gratuita.
+3. Haz clic en **New +** ➔ **Web Service**.
+4. Conecta tu repositorio de GitHub.
+5. Configura:
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+6. Haz clic en **Create Web Service**. ¡Listo! Render te dará un enlace público (ej: `https://tu-app.onrender.com`) para compartir con quien quieras.

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader Pro | Descarga Video y Audio Gratis</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] min-h-screen flex flex-col justify-between selection:bg-red-500 selection:text-white">
+
+    <!-- Encabezado / Navbar -->
+    <header class="border-b border-slate-800/80 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/30">
+                    <i class="fa-brands fa-youtube text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                        YouTube <span class="text-red-500">Downloader</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium">Rápido, Seguro y en Alta Definición</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    En Línea
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16 w-full">
+        
+        <!-- Hero Section -->
+        <div class="text-center space-y-4 mb-10">
+            <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                Descarga tus videos y audios <br>
+                <span class="bg-gradient-to-r from-red-500 via-rose-500 to-orange-400 bg-clip-text text-transparent">favoritos de YouTube</span>
+            </h2>
+            <p class="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
+                Convierte a MP3, MP4 en máxima resolución (1080p, 720p) sin límites y de forma gratuita.
+            </p>
+        </div>
+
+        <!-- Barra de Búsqueda / Formulario -->
+        <div class="relative bg-slate-900/60 p-2 sm:p-3 rounded-2xl border border-slate-800 shadow-2xl backdrop-blur-xl mb-8">
+            <form id="search-form" class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-grow flex items-center">
+                    <i class="fa-solid fa-link absolute left-4 text-slate-500 text-lg"></i>
+                    <input 
+                        type="text" 
+                        id="video-url" 
+                        placeholder="Pega el enlace del video de YouTube aquí (ej: https://www.youtube.com/watch?v=...)" 
+                        required
+                        class="w-full bg-slate-950/80 text-white pl-12 pr-4 py-3.5 sm:py-4 rounded-xl border border-slate-800 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-sm sm:text-base placeholder:text-slate-600 transition-all"
+                    >
+                </div>
+                <button 
+                    type="submit" 
+                    id="search-btn"
+                    class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-semibold px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl transition-all duration-200 shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap active:scale-[0.98]"
+                >
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Analizar Video</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Indicador de Carga -->
+        <div id="loading-spinner" class="hidden my-12 text-center">
+            <div class="inline-flex flex-col items-center gap-3">
+                <div class="w-12 h-12 border-4 border-slate-800 border-t-red-500 rounded-full animate-spin"></div>
+                <p class="text-sm font-medium text-slate-400">Analizando metadatos y formatos...</p>
+            </div>
+        </div>
+
+        <!-- Tarjeta de Error -->
+        <div id="error-card" class="hidden mb-8 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3">
+            <i class="fa-solid fa-circle-exclamation text-lg mt-0.5"></i>
+            <div class="flex-grow">
+                <p class="font-semibold" id="error-title">Ocurrió un error</p>
+                <p class="text-xs text-red-400/80 mt-0.5" id="error-message"></p>
+            </div>
+        </div>
+
+        <!-- Tarjeta de Resultados del Video (Oculta inicialmente) -->
+        <div id="result-card" class="hidden bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-7 shadow-2xl backdrop-blur-xl space-y-6">
+            
+            <!-- Encabezado del Video con Miniatura -->
+            <div class="flex flex-col sm:flex-row gap-5 items-start">
+                <div class="relative w-full sm:w-60 aspect-video rounded-xl overflow-hidden bg-slate-950 flex-shrink-0 shadow-md">
+                    <img id="video-thumbnail" src="" alt="Miniatura" class="w-full h-full object-cover">
+                    <span id="video-duration" class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-sm text-xs font-semibold text-white">
+                        00:00
+                    </span>
+                </div>
+                <div class="space-y-2 flex-grow">
+                    <h3 id="video-title" class="text-lg sm:text-xl font-bold text-white line-clamp-2 leading-snug">
+                        Título del video
+                    </h3>
+                    <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400 font-medium">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-circle text-slate-500"></i>
+                            <span id="video-author">Canal</span>
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-eye text-slate-500"></i>
+                            <span id="video-views">0</span> vistas
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Pestañas de Formato (Video, Audio, Miniatura) -->
+            <div class="space-y-4">
+                <div class="flex border-b border-slate-800 gap-2">
+                    <button id="tab-video" class="tab-btn active-tab px-4 py-2.5 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 border-b-2 border-red-500 text-red-400">
+                        <i class="fa-solid fa-video"></i>
+                        <span>Video (MP4)</span>
+                    </button>
+                    <button id="tab-audio" class="tab-btn px-4 py-2.5 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-music"></i>
+                        <span>Solo Audio</span>
+                    </button>
+                    <button id="tab-thumb" class="tab-btn px-4 py-2.5 font-semibold text-sm rounded-t-lg transition-colors flex items-center gap-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-image"></i>
+                        <span>Miniatura HD</span>
+                    </button>
+                </div>
+
+                <!-- Contenido Pestaña Video -->
+                <div id="pane-video" class="tab-pane space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                            Seleccionar Calidad:
+                        </label>
+                        <div id="resolutions-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <!-- Opciones generadas dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenido Pestaña Audio -->
+                <div id="pane-audio" class="tab-pane hidden space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                            Formato de Audio:
+                        </label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <button type="button" class="audio-opt-btn active-opt p-3 rounded-xl border border-red-500 bg-red-500/10 text-white font-semibold text-sm text-center" data-audio-fmt="mp3">
+                                MP3 (192 kbps)
+                            </button>
+                            <button type="button" class="audio-opt-btn p-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-slate-700 text-slate-300 font-semibold text-sm text-center" data-audio-fmt="m4a">
+                                M4A (AAC)
+                            </button>
+                            <button type="button" class="audio-opt-btn p-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-slate-700 text-slate-300 font-semibold text-sm text-center" data-audio-fmt="wav">
+                                WAV (Sin compresión)
+                            </button>
+                            <button type="button" class="audio-opt-btn p-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:border-slate-700 text-slate-300 font-semibold text-sm text-center" data-audio-fmt="flac">
+                                FLAC (Alta calidad)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenido Pestaña Miniatura -->
+                <div id="pane-thumb" class="tab-pane hidden space-y-3">
+                    <p class="text-sm text-slate-400">Descarga la portada original en la máxima resolución disponible (JPEG/WebP).</p>
+                </div>
+
+                <!-- Botón de Descarga Principal -->
+                <div class="pt-4">
+                    <button 
+                        id="start-download-btn"
+                        class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 rounded-xl shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.99] text-base"
+                    >
+                        <i class="fa-solid fa-cloud-arrow-down text-lg"></i>
+                        <span id="download-btn-text">Descargar Ahora</span>
+                    </button>
+                </div>
+
+                <!-- Barra de Progreso de Descarga Web -->
+                <div id="download-progress-bar" class="hidden space-y-2 pt-2">
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full w-full animate-pulse"></div>
+                    </div>
+                    <p class="text-center text-xs text-slate-400">Procesando y transfiriendo archivo a tu navegador... Por favor espera.</p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Características / Beneficios -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-16 text-center">
+            <div class="p-6 rounded-2xl bg-slate-900/30 border border-slate-800/60 space-y-3">
+                <div class="w-12 h-12 mx-auto rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <h4 class="font-bold text-white text-base">Descargas Rápidas</h4>
+                <p class="text-xs text-slate-400">Extracción y procesamiento en segundos directamente a tu dispositivo.</p>
+            </div>
+            <div class="p-6 rounded-2xl bg-slate-900/30 border border-slate-800/60 space-y-3">
+                <div class="w-12 h-12 mx-auto rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h4 class="font-bold text-white text-base">100% Seguro y Privado</h4>
+                <p class="text-xs text-slate-400">Sin anuncios molestos ni descargas de programas externos.</p>
+            </div>
+            <div class="p-6 rounded-2xl bg-slate-900/30 border border-slate-800/60 space-y-3">
+                <div class="w-12 h-12 mx-auto rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+                <h4 class="font-bold text-white text-base">Todos los Dispositivos</h4>
+                <p class="text-xs text-slate-400">Úsalo desde tu teléfono Android, iPhone, tablet o PC.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-8 text-center text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-2">
+            <p>Descargador de YouTube en Python | Proyecto de Código Abierto</p>
+            <p class="text-[11px] text-slate-600">Diseñado para uso personal y educativo.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts de la aplicación -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
