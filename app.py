@@ -173,10 +173,9 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Modo 2: Servidor HTTP Nativo de Python (Sin dependencias externas)
 # ---------------------------------------------------------------------------
-if not FLASK_AVAILABLE:
-    from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
-    class StandaloneWebHandler(SimpleHTTPRequestHandler):
+class StandaloneWebHandler(SimpleHTTPRequestHandler):
         def do_GET(self):
             parsed = urllib.parse.urlparse(self.path)
             path = parsed.path
