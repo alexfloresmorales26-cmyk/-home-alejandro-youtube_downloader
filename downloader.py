@@ -1,9 +1,10 @@
-
+# -*- coding: utf-8 -*-
 """
 =============================================================================
 MODULO: downloader.py
 DESCRIPCION: Motor principal de descarga con yt-dlp.
              Soporta video, audio, miniaturas, subtítulos y listas de reproducción.
+             Usa cadenas de formato robustas con múltiples niveles de respaldo.
 =============================================================================
 """
 
@@ -12,6 +13,7 @@ import sys
 import shutil
 from typing import Optional, Dict, Any, Callable, List
 import yt_dlp
+
 
 # Códigos de colores ANSI para la consola
 class Colors:
@@ -51,6 +53,35 @@ def format_duration(seconds: Optional[int]) -> str:
 def has_ffmpeg() -> bool:
     """Comprueba si ffmpeg está instalado en el sistema."""
     return shutil.which('ffmpeg') is not None
+
+
+def _build_video_format(height: Optional[str] = None, ffmpeg: bool = False) -> str:
+    """
+    Construye la cadena de formato de video con múltiples niveles de respaldo
+    para garantizar que siempre haya un formato disponible.
+    """
+    if height:
+        if ffmpeg:
+            return (
+                f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
+                f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
+                f"/bestvideo[height<={height}]+bestaudio"
+                f"/best[height<={height}]"
+                f"/bestvideo+bestaudio"
+                f"/best"
+            )
+        else:
+            return (
+                f"best[height={height}][ext=mp4]"
+                f"/best[height<={height}][ext=mp4]"
+                f"/best[height<={height}]"
+                f"/best"
+            )
+    else:
+        if ffmpeg:
+            return "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+        else:
+            return "best[ext=mp4]/best"
 
 
 class YouTubeDownloader:
@@ -96,11 +127,11 @@ class YouTubeDownloader:
             sys.stdout.flush()
 
         elif status == 'finished':
-            sys.stdout.write(f"\n  {Colors.GREEN}✓ Descarga completada. Procesando y guardando...{Colors.END}\n")
+            sys.stdout.write(f"\n  {Colors.GREEN}✓ Descarga completada. Guardando archivo...{Colors.END}\n")
             sys.stdout.flush()
 
     def get_info(self, url: str) -> Dict[str, Any]:
-        """Obtiene la información y metadatos del video o lista sin descargar."""
+        """Obtiene metadatos del video o lista sin descargarlo."""
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
@@ -123,34 +154,10 @@ class YouTubeDownloader:
         return [f"{h}p" for h in sorted_heights]
 
     def download_video(self, url: str, resolution: Optional[str] = None, download_subtitles: bool = False) -> bool:
-        """
-        Descarga el video en la mejor calidad o resolución especificada.
-        """
+        """Descarga el video en la mejor calidad o resolución especificada."""
         outtmpl = os.path.join(self.output_dir, '%(title)s.%(ext)s')
-
-        if resolution:
-            height = resolution.replace('p', '')
-            if self.has_ffmpeg:
-                format_str = (
-                    f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
-                    f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
-                    f"/bestvideo[height<={height}]+bestaudio"
-                    f"/best[height<={height}]"
-                    f"/bestvideo+bestaudio"
-                    f"/best"
-                )
-            else:
-                format_str = (
-                    f"best[height={height}][ext=mp4]"
-                    f"/best[height<={height}][ext=mp4]"
-                    f"/best[height<={height}]"
-                    f"/best"
-                )
-        else:
-            if self.has_ffmpeg:
-                format_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
-            else:
-                format_str = "best[ext=mp4]/best"
+        height = resolution.replace('p', '') if resolution else None
+        format_str = _build_video_format(height=height, ffmpeg=self.has_ffmpeg)
 
         ydl_opts = {
             'format': format_str,
@@ -177,9 +184,7 @@ class YouTubeDownloader:
             return False
 
     def download_audio(self, url: str, audio_format: str = "mp3", quality: str = "192") -> bool:
-        """
-        Descarga y convierte el audio a formatos como MP3, M4A, WAV, FLAC.
-        """
+        """Descarga y convierte el audio a MP3, M4A, WAV o FLAC."""
         outtmpl = os.path.join(self.output_dir, '%(title)s.%(ext)s')
 
         if self.has_ffmpeg:
@@ -196,7 +201,6 @@ class YouTubeDownloader:
                 'quiet': True,
             }
         else:
-            # Si no hay ffmpeg, descargar el mejor contenedor de audio directo
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': outtmpl,
@@ -214,9 +218,7 @@ class YouTubeDownloader:
             return False
 
     def download_playlist(self, url: str, audio_only: bool = False, resolution: Optional[str] = None) -> bool:
-        """
-        Descarga una lista de reproducción completa en su propia subcarpeta.
-        """
+        """Descarga una lista de reproducción completa en su propia subcarpeta."""
         outtmpl = os.path.join(self.output_dir, '%(playlist_title)s', '%(playlist_index)02d - %(title)s.%(ext)s')
 
         postprocessors = []
@@ -228,11 +230,9 @@ class YouTubeDownloader:
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 })
-        elif resolution:
-            height = resolution.replace('p', '')
-            format_str = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best" if self.has_ffmpeg else f"best[height<={height}]/best"
         else:
-            format_str = "bestvideo+bestaudio/best" if self.has_ffmpeg else "best"
+            height = resolution.replace('p', '') if resolution else None
+            format_str = _build_video_format(height=height, ffmpeg=self.has_ffmpeg)
 
         ydl_opts = {
             'format': format_str,
