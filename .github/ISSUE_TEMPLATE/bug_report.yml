@@ -1,0 +1,38 @@
+name: 🐛 Reporte de Error (Bug)
+description: Informa de un fallo en la descarga, error de URL o problema en la interfaz.
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias por reportar un problema! Por favor proporciona los siguientes detalles para resolverlo rápidamente.
+  - type: input
+    id: video_url
+    attributes:
+      label: URL del Video / Playlist con problema
+      placeholder: https://www.youtube.com/watch?v=...
+    validations:
+      required: true
+  - type: dropdown
+    id: interface_type
+    attributes:
+      label: ¿En qué interfaz ocurrió el error?
+      options:
+        - Aplicación de Escritorio (gui.py)
+        - Página Web (app.py)
+        - Consola / Terminal (main.py)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del Error
+      placeholder: Explica qué pasó y qué mensaje de error apareció...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Mensaje de la Terminal o Consola
+      placeholder: Pega aquí los mensajes de error de la terminal...

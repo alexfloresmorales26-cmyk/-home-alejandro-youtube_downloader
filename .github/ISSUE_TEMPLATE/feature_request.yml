@@ -1,0 +1,23 @@
+name: 💡 Sugerencia de Nueva Función (Feature Request)
+description: Propón una nueva funcionalidad, formato de audio/video o mejora en la interfaz.
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Nos encanta recibir ideas para mejorar el descargador!
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: ¿Qué función te gustaría agregar?
+      placeholder: Describe de forma clara la nueva característica...
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: ¿Cuál es el beneficio de esta función?
+      placeholder: Explica por qué sería útil para los usuarios...
+    validations:
+      required: false
