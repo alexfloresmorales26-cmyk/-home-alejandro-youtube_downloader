@@ -108,9 +108,28 @@ def process_download_request(url: str, download_type: str = "video", quality: st
     else:  # video
         if quality and quality != "best":
             height = quality.replace('p', '')
-            format_str = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best" if ffmpeg_available else f"best[height<={height}]/best"
+            if ffmpeg_available:
+                # Cadena de respaldo completa: resolución exacta → menor o igual → cualquier mp4 → mejor disponible
+                format_str = (
+                    f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
+                    f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
+                    f"/bestvideo[height<={height}]+bestaudio"
+                    f"/best[height<={height}]"
+                    f"/bestvideo+bestaudio"
+                    f"/best"
+                )
+            else:
+                format_str = (
+                    f"best[height={height}][ext=mp4]"
+                    f"/best[height<={height}][ext=mp4]"
+                    f"/best[height<={height}]"
+                    f"/best"
+                )
         else:
-            format_str = "bestvideo+bestaudio/best" if ffmpeg_available else "best"
+            if ffmpeg_available:
+                format_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+            else:
+                format_str = "best[ext=mp4]/best"
 
         ydl_opts = {
             'format': format_str,
