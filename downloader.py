@@ -131,14 +131,26 @@ class YouTubeDownloader:
         if resolution:
             height = resolution.replace('p', '')
             if self.has_ffmpeg:
-                format_str = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
+                format_str = (
+                    f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
+                    f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
+                    f"/bestvideo[height<={height}]+bestaudio"
+                    f"/best[height<={height}]"
+                    f"/bestvideo+bestaudio"
+                    f"/best"
+                )
             else:
-                format_str = f"best[height<={height}]/best"
+                format_str = (
+                    f"best[height={height}][ext=mp4]"
+                    f"/best[height<={height}][ext=mp4]"
+                    f"/best[height<={height}]"
+                    f"/best"
+                )
         else:
             if self.has_ffmpeg:
-                format_str = "bestvideo+bestaudio/best"
+                format_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
             else:
-                format_str = "best"
+                format_str = "best[ext=mp4]/best"
 
         ydl_opts = {
             'format': format_str,
