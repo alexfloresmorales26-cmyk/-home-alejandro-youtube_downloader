@@ -11,7 +11,7 @@ Ejecuta el servidor web con un solo comando:
 ```bash
 python3 app.py
 ```
-Abre tu navegador en: **`http://localhost:5000`**
+Abre tu navegador en: **`http://localhost:5000`*
 
 #### ✨ Características de la Web:
 - 🔍 **Buscador con Previsualización**: Pega el enlace y mira la portada, autor, vistas y duración al instante.
