@@ -22,7 +22,6 @@ downloads/
 *.ytdl
 
 # IDEs y editores
-.vscode/
 .idea/
 *.swp
 *.swo

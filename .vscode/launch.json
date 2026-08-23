@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🖥️ Ejecutar App de Escritorio (gui.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/gui.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🌐 Ejecutar Servidor Web (app.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "💻 Ejecutar Menú por Consola (main.py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🧪 Ejecutar Pruebas Unitarias",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_downloader.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
