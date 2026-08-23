@@ -24,7 +24,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Lógica común de procesamiento de API
+# Lógica común de procesamiento de API y render 
 # ---------------------------------------------------------------------------
 def process_info_request(url: str) -> dict:
     """Extrae metadatos y resoluciones del video usando yt-dlp."""
