@@ -3,7 +3,7 @@
 =============================================================================
 MODULO: gui.py
 DESCRIPCION: Lanzador de la Aplicación de Escritorio Nativa (Desktop GUI).
-             Abre una ventana independiente en la pantalla del usuario.
+             Mantiene el servidor web activo y abre la ventana independiente.
 =============================================================================
 """
 
@@ -15,45 +15,26 @@ import threading
 import subprocess
 import webbrowser
 from http.server import HTTPServer
-from app import StandaloneWebHandler, TEMPLATES_DIR, STATIC_DIR
+from app import StandaloneWebHandler
 
 
-def find_free_port() -> int:
-    """Encuentra un puerto TCP libre en el sistema."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
-
-
-def start_local_server(port: int):
-    """Inicia el servidor local en un hilo en segundo plano."""
-    server = HTTPServer(('127.0.0.1', port), StandaloneWebHandler)
-    server.serve_forever()
-
-
-def open_standalone_window(url: str):
-    """
-    Intenta abrir la URL como una ventana de aplicación nativa e independiente
-    usando Chrome/Chromium/Edge en modo app, o PyWebView si está disponible.
-    """
-    # 1. Intentar con PyWebView si está instalado
+def find_free_port(default_port: int = 5000) -> int:
+    """Intenta usar el puerto por defecto o busca uno libre."""
     try:
-        import webview
-        print("[Desktop GUI] Iniciando con motor PyWebView...")
-        webview.create_window(
-            title="YouTube Downloader Pro",
-            url=url,
-            width=1050,
-            height=750,
-            resizable=True,
-            min_size=(800, 600)
-        )
-        webview.start()
-        return
-    except ImportError:
-        pass
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', default_port))
+            return default_port
+    except OSError:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', 0))
+            return s.getsockname()[1]
 
-    # 2. Intentar abrir en modo App Nativa con navegadores del sistema (ventana dedicada sin pestañas)
+
+def open_desktop_window(url: str):
+    """Abre la ventana de la aplicación de escritorio."""
+    time.sleep(0.8)  # Dar tiempo a que el servidor esté escuchando peticiones
+
+    # 1. Modo nativo con navegadores del sistema (Ventana sin barras de navegador)
     browsers = [
         ["google-chrome", f"--app={url}", "--window-size=1050,750"],
         ["chromium-browser", f"--app={url}", "--window-size=1050,750"],
@@ -65,35 +46,42 @@ def open_standalone_window(url: str):
     for cmd in browsers:
         try:
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"[Desktop GUI] Ventana de escritorio abierta con: {cmd[0]}")
+            print(f"✓ Ventana de escritorio iniciada con: {cmd[0]}")
             return
         except FileNotFoundError:
             continue
 
-    # 3. Respaldo estándar si no hay modo app disponible
-    print("[Desktop GUI] Abriendo en el navegador predeterminado...")
+    # 2. Respaldo abriendo en el navegador predeterminado
+    print("✓ Abriendo en el navegador predeterminado...")
     webbrowser.open(url)
 
 
 def main():
     print("""
 ╔════════════════════════════════════════════════════════════════╗
-║             INICIANDO APLICACIÓN DE ESCRITORIO                 ║
+║             DESCARGADOR DE YOUTUBE - MODO ESCRITORIO           ║
 ╚════════════════════════════════════════════════════════════════╝
     """)
-    port = find_free_port()
+    port = find_free_port(5000)
     url = f"http://127.0.0.1:{port}"
 
-    # Iniciar servidor interno en segundo plano
-    server_thread = threading.Thread(target=start_local_server, args=(port,), daemon=True)
-    server_thread.start()
-    time.sleep(0.5)
+    # Crear servidor HTTP local
+    server = HTTPServer(('127.0.0.1', port), StandaloneWebHandler)
 
-    print(f"✓ Servidor interno activo en: {url}")
-    print("✓ Abriendo ventana de escritorio...")
+    print(f"✓ Servidor local iniciado en: {url}")
+    print("✓ Abriendo interfaz gráfica...")
+    print("\n[INFO] Deja esta terminal abierta mientras uses la aplicación.")
+    print("[INFO] Para cerrar la aplicación, presiona Ctrl + C en esta terminal.\n")
 
-    # Abrir ventana de escritorio
-    open_standalone_window(url)
+    # Lanzar la ventana en un hilo secundario mientras el servidor corre en el hilo principal
+    threading.Thread(target=open_desktop_window, args=(url,), daemon=True).start()
+
+    # Mantener el servidor escuchando de forma indefinida
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\n\nCerrando aplicación... ¡Hasta pronto!")
+        server.server_close()
 
 
 if __name__ == "__main__":
