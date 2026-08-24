@@ -22,11 +22,11 @@ def find_free_port(default_port: int = 5000) -> int:
     """Intenta usar el puerto por defecto o busca uno libre."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('127.0.0.1', default_port))
+            s.bind(("127.0.0.1", default_port))
             return default_port
     except OSError:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('127.0.0.1', 0))
+            s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
 
 
@@ -57,16 +57,18 @@ def open_desktop_window(url: str):
 
 
 def main():
-    print("""
+    print(
+        """
 ╔════════════════════════════════════════════════════════════════╗
 ║             DESCARGADOR DE YOUTUBE - MODO ESCRITORIO           ║
 ╚════════════════════════════════════════════════════════════════╝
-    """)
+    """
+    )
     port = find_free_port(5000)
     url = f"http://127.0.0.1:{port}"
 
     # Crear servidor HTTP local
-    server = HTTPServer(('127.0.0.1', port), StandaloneWebHandler)
+    server = HTTPServer(("127.0.0.1", port), StandaloneWebHandler)
 
     print(f"✓ Servidor local iniciado en: {url}")
     print("✓ Abriendo interfaz gráfica...")
