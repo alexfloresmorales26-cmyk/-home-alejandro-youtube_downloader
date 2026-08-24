@@ -73,8 +73,21 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             git add -A
             git commit -m "style: apply black formatting" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>" || echo "No changes to commit"
-            echo "Pushing changes to origin/$BRANCH_NAME"
-            git push origin "HEAD:$BRANCH_NAME"
+
+            # Create a dedicated autoformat branch and push it
+            NEW_BRANCH="autoformat/${BRANCH_NAME}-${GITHUB_RUN_ID}"
+            echo "Creating and pushing new branch: $NEW_BRANCH"
+            git branch -f "$NEW_BRANCH"
+            git push origin "$NEW_BRANCH" --force
+
+            # Create a Pull Request from NEW_BRANCH into the original branch
+            API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls"
+            TITLE="ci: autoformat $BRANCH_NAME (run $GITHUB_RUN_ID)"
+            BODY="This PR applies automatic formatting changes from the CI autoformat workflow. If acceptable, merge into $BRANCH_NAME.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+            echo "Creating PR from $NEW_BRANCH into $BRANCH_NAME"
+            create_resp=$(curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" -d "{\"title\": \"${TITLE}\", \"head\": \"${GITHUB_REPOSITORY_OWNER}:${NEW_BRANCH}\", \"base\": \"${BRANCH_NAME}\", \"body\": \"${BODY}\"}" "$API_URL")
+            echo "Create response: $create_resp"
           else
             echo "No formatting changes"
           fi
