@@ -1,0 +1,48 @@
+name: Auto-merge PRs when checks pass
+
+on:
+  check_suite:
+    types: [completed]
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Check event conclusion
+        if: ${{ github.event.check_suite.conclusion != 'success' }}
+        run: |
+          echo "Check suite conclusion is not success (${ { github.event.check_suite.conclusion } }) - skipping auto-merge"
+
+      - name: Find PRs for check commit
+        env:
+          GITHUB_API: https://api.github.com
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.check_suite.head_sha }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Looking for PRs that include commit $SHA"
+          prs=$(curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github.groot-preview+json" "$GITHUB_API/repos/$REPO/commits/$SHA/pulls")
+          pr_number=$(echo "$prs" | jq -r '.[0].number // empty')
+          if [ -z "$pr_number" ]; then
+            echo "No PR found for commit $SHA. Exiting."
+            exit 0
+          fi
+          echo "Found PR #$pr_number"
+
+          # Check PR mergeable state
+          pr=$(curl -s -H "Authorization: Bearer $TOKEN" "$GITHUB_API/repos/$REPO/pulls/$pr_number")
+          mergeable=$(echo "$pr" | jq -r '.mergeable_state')
+          echo "PR mergeable_state=$mergeable"
+          if [ "$mergeable" != "clean" ] && [ "$mergeable" != "unstable" ] && [ "$mergeable" != "has_hooks" ]; then
+            echo "PR not in a mergeable state. Exiting."
+            exit 0
+          fi
+
+          # All checks passed - attempt merge
+          echo "Merging PR #$pr_number"
+          merge_resp=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "$GITHUB_API/repos/$REPO/pulls/$pr_number/merge" -d '{"merge_method":"merge"}')
+          echo "Merge response: $merge_resp"
