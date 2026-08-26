@@ -1,9 +1,10 @@
 commit_hash,author_name,author_email,commit_date,message
+2b13436e8c5dd499f439e3e757012de12a224629,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-26 14:15:27 -0600,chore: normalize pre-commit config
+a2614f7d66caccb36f1139dbcc1eb00abe69795b,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-25 17:06:48 -0600,chore: add contributions_last_year.csv
 f4ef79fc131f2e2e9fea503c9b0128f3a893ce34,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-25 17:01:04 -0600,ci: notify on PR merge by posting a comment
 cd1528e3a56488f1ed46ab5ab799e3fdddb70df5,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-25 16:55:09 -0600,ci: add auto-merge workflow to merge PRs when checks pass
 7279a96e4093d2740af507d0922d6112f1a635ad,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-25 16:45:52 -0600,chore: add Dockerfile and expand README with install/run instructions
 92681314a41fe9bf887609a47ec9b8a0af75c221,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-25 13:56:08 -0600,ci: make autoformat PR creation more defensive and robust (better error handling)
-7b21e67f53abe20d24e5cd669eba62432a010dd8,github-actions[bot],41898282+github-actions[bot]@users.noreply.github.com,2026-08-24 21:22:19 +0000,style: apply black formatting
 e9651a1adb65b8ea9cab2a1374c6f5799934665a,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 15:33:47 -0600,chore(contrib): todays contribution 10
 407888b5efeec672d866937b33df5d9d45c75d65,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 15:33:46 -0600,chore(contrib): todays contribution 9
 65e99d5efb06136f9d121e1de9b8569dce697e5f,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 15:33:45 -0600,chore(contrib): todays contribution 8
@@ -26,33 +27,3 @@ c273ce854fae792cc45d9524dcae72037041b041,Alejandro Morales,alexfloresmorales26@g
 23c9e0e3f364312834e8c6f40f297824dc31e1c2,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 15:15:38 -0600,ci: add create-pr workflow to open PRs for formatted branches
 f225f3bbc2aa912733f85404779237abdea5baa0,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 14:54:47 -0600,ci: add autoformat workflow to apply black and push changes
 85130859b699aec703494465d8f17de2829facfe,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 14:50:47 -0600,"ci: add GitHub Actions CI, dev requirements and pre-commit config"
-d797dae163f3092b17017d012ddb1cb4530d5f61,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-24 14:43:49 -0600,repo: ignore virtual environment directory .venv
-174517f0ca2e0b1f0d886f3f6cc0946555ec6293,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 18:35:57 -0600,Add version comment to launch.json
-9253d6016b9ba921e911499c62d7e53eb86ccba2,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 17:13:10 -0600,Refactor: centralize video format logic with robust fallback chain in downloader.py
-b140eb1c055e6fa6c040ac1a32cc23116fccbc9c,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 17:06:38 -0600,"Fix: use robust format fallback chain to avoid ""Requested format not available"" error"
-815d46c81ad17d5018fcb913246c025a11072fee,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:44:50 -0600,Merge pull request #1 from alexfloresmorales26-cmyk/feature/ui-enhancements
-c9c1f8691c3ca99953e50ed50b94178ebf022002,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:42:39 -0600,Enhance UI responsiveness and add code review workflow
-46347d9bd2bd7f9c2789a9564f09a28a1f3b0cb5,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:41:11 -0600,Add GitHub Issues and Pull Request templates
-2ba1c872189b981997a9fe0f7ec1ad43e06d16e9,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:35:44 -0600,Hide compiled .pyc files from VS Code explorer
-a32206c88bf403a29f5ff69d56668f92cdbfa409,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:31:40 -0600,Update app.py
-4f970ab33ad43d78f9b63bf6fcb97a928c30a625,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:29:51 -0600,Add VS Code launch configurations and workspace settings
-42f81230be75a9209b2b7cfd36d29f25b462b,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:28:10 -0600,(truncated message)
-f29c69855923b0cd1aac75bc8b7808b49eea0243,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-23 13:24:18 -0600,Add Desktop GUI application mode (gui.py)
-f43fe6836a36a58f296f6ad26f24e844e96eb9f2,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-22 20:46:58 -0600,Correct URL formatting in README.md
-f39273319b55f80fd3570f547a52d5cf96aa1aa9,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-22 19:41:23 -0600,Update downloader.py
-3375bb15a1fc2e27c2ddb7e8f413853511688e92,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-22 19:33:48 -0600,Update app.py
-4bc3221bec61932c3b714fb221b1751c9969ef63,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-22 11:09:55 -0600,Add full web application with modern UI and dual server support
-08a2c984bf2e3120ba189304b4c4304c8cb52d10,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-22 11:06:26 -0600,Update README: clean repository path references
-dd5b611ed5d968a2a172d7d4af5fc93bb9df80c2,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-22 10:58:50 -0600,Initial commit: YouTube Downloader in Python
-288351a1e54345ccc8844570cb0ea2d8a6dbb447,Alejandro Morales,alexfloresmorales26@gmail.com,2026-07-25 12:00:00 +0000,chore(contrib): backdated contribution 1 (2026-07-25T12:00:00Z)
-f035d248d1fbf68120e51dd3584990f68a802f5d,Alejandro Morales,alexfloresmorales26@gmail.com,2026-06-25 12:00:00 +0000,chore(contrib): backdated contribution 2 (2026-06-25T12:00:00Z)
-ac1be2f3dfefb9dbf9ecca06e6da5bf14c1578ca,Alejandro Morales,alexfloresmorales26@gmail.com,2026-05-26 12:00:00 +0000,chore(contrib): backdated contribution 3 (2026-05-26T12:00:00Z)
-d4e60b091fcb86f5e1ee94e0e288be8044f9fcfd,Alejandro Morales,alexfloresmorales26@gmail.com,2026-04-26 12:00:00 +0000,chore(contrib): backdated contribution 4 (2026-04-26T12:00:00Z)
-aa8a7975c787d0b1805e20a351b22df7d08212c1,Alejandro Morales,alexfloresmorales26@gmail.com,2026-03-27 12:00:00 +0000,chore(contrib): backdated contribution 5 (2026-03-27T12:00:00Z)
-49ad941a28ce65ea158e468d8127fc16a5f4a2b5,Alejandro Morales,alexfloresmorales26@gmail.com,2026-02-25 12:00:00 +0000,chore(contrib): backdated contribution 6 (2026-02-25T12:00:00Z)
-fe09a781d67cd3abf62543c2d8b67e439e3bfa11,Alejandro Morales,alexfloresmorales26@gmail.com,2026-01-26 12:00:00 +0000,chore(contrib): backdated contribution 7 (2026-01-26T12:00:00Z)
-0aaeae86d40b56dec5f5c44dfc534c0c68b1ca50,Alejandro Morales,alexfloresmorales26@gmail.com,2025-12-27 12:00:00 +0000,chore(contrib): backdated contribution 8 (2025-12-27T12:00:00Z)
-b27380c88a4fa9148d0e87405698e62ee3c6431c,Alejandro Morales,alexfloresmorales26@gmail.com,2025-11-27 12:00:00 +0000,chore(contrib): backdated contribution 9 (2025-11-27T12:00:00Z)
-f4fc7425525ec5de92c8210782fb61c743ee891b,Alejandro Morales,alexfloresmorales26@gmail.com,2025-10-28 12:00:00 +0000,chore(contrib): backdated contribution 10 (2025-10-28T12:00:00Z)
-9a89918b7933e8ece47684c2036d029358c2fc45,Alejandro Morales,alexfloresmorales26@gmail.com,2025-09-28 12:00:00 +0000,chore(contrib): backdated contribution 11 (2025-09-28T12:00:00Z)
-78588ed535e1ca2ed1582cd5a78bcfbf73e1fbd1,Alejandro Morales,alexfloresmorales26@gmail.com,2025-08-29 12:00:00 +0000,chore(contrib): backdated contribution 12 (2025-08-29T12:00:00Z)
