@@ -1,0 +1,24 @@
+name: Notify on PR merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Post merge comment
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          API_URL="https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments"
+          BODY="{\"body\": \"PR #${PR_NUMBER} fue merged automáticamente y los cambios se han integrado en main. Si quieres, revisa la página de commits y el historial.\" }"
+          curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" -d "$BODY" "$API_URL" || true

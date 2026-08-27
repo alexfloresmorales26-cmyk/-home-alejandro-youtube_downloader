@@ -1,0 +1,95 @@
+name: Autoformat
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ '**' ]
+  workflow_dispatch: {}
+
+jobs:
+  autoformat:
+    name: Autoformat and push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Run black
+        run: |
+          # Format in place; black returns non-zero when changes are made so allow failure
+          black . || true
+
+      - name: Run flake8 (report only)
+        run: |
+          if command -v flake8 >/dev/null 2>&1; then
+            flake8 || true
+          else
+            echo "flake8 not installed; skipping"
+          fi
+
+      - name: Commit and push formatted code
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          # Run defensively: capture errors and report, avoid failing the whole job unexpectedly
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Ensure we have all refs and know the branch name
+          git fetch --all || echo "git fetch failed"
+          if [ -n "$HEAD_REF" ]; then
+            BRANCH_NAME="$HEAD_REF"
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
+          echo "Determined branch: $BRANCH_NAME"
+
+          # Checkout the branch (handle detached HEAD in some triggers)
+          if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+            git checkout "$BRANCH_NAME" || echo "git checkout $BRANCH_NAME failed"
+          else
+            # Try to create a local branch tracking the remote
+            git checkout -b "$BRANCH_NAME" "origin/$BRANCH_NAME" || git checkout --track "origin/$BRANCH_NAME" || echo "could not create local branch $BRANCH_NAME"
+          fi
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "style: apply black formatting" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>" || echo "No changes to commit"
+
+            # Create a dedicated autoformat branch and push it
+            NEW_BRANCH="autoformat/${BRANCH_NAME}-${GITHUB_RUN_ID}"
+            echo "Creating and pushing new branch: $NEW_BRANCH"
+            git branch -f "$NEW_BRANCH" || echo "git branch -f failed"
+            git push origin "$NEW_BRANCH" --force || (echo "git push of $NEW_BRANCH failed"; cat /proc/version || true)
+
+            # Create a Pull Request from NEW_BRANCH into the original branch
+            API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls"
+            TITLE="ci: autoformat $BRANCH_NAME (run $GITHUB_RUN_ID)"
+            BODY="This PR applies automatic formatting changes from the CI autoformat workflow. If acceptable, merge into $BRANCH_NAME.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+            echo "Creating PR from $NEW_BRANCH into $BRANCH_NAME"
+            # Compute owner explicitly to avoid unset vars
+            OWNER=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f1)
+            create_resp=$(curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" -d "{\"title\": \"${TITLE}\", \"head\": \"${NEW_BRANCH}\", \"base\": \"${BRANCH_NAME}\", \"body\": \"${BODY}\"}" "$API_URL" ) || true
+            echo "Create response: $create_resp"
+          else
+            echo "No formatting changes"
+          fi
