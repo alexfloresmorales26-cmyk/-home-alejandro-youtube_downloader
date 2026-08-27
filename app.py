@@ -224,8 +224,12 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
 
         if path.startswith("/static/"):
             rel_path = path[len("/static/") :]
-            file_path = os.path.join(STATIC_DIR, rel_path)
-            if os.path.exists(file_path) and os.path.isfile(file_path):
+            file_path = os.path.abspath(os.path.join(STATIC_DIR, rel_path))
+            static_root = os.path.abspath(STATIC_DIR)
+            if (
+                os.path.commonpath([static_root, file_path]) == static_root
+                and os.path.isfile(file_path)
+            ):
                 content_type = (
                     "text/css"
                     if file_path.endswith(".css")
