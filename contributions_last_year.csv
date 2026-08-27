@@ -1,4 +1,5 @@
 commit_hash,author_name,author_email,commit_date,message
+3c13874,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-27 12:00:00 -0600,fix: harden static files and pre-commit config
 0ae3670c46b3c13e1defcccab947377396c7616b,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-26 14:18:54 -0600,chore: update contributions_last_year.csv after recalculation
 2b13436e8c5dd499f439e3e757012de12a224629,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-26 14:15:27 -0600,chore: normalize pre-commit config
 a2614f7d66caccb36f1139dbcc1eb00abe69795b,Alejandro Morales,alexfloresmorales26@gmail.com,2026-08-25 17:06:48 -0600,chore: add contributions_last_year.csv
