@@ -64,7 +64,6 @@ def main():
     """)
     port = find_free_port(5000)
     url = f"http://127.0.0.1:{port}"
-
     # Crear servidor HTTP local
     server = HTTPServer(('127.0.0.1', port), StandaloneWebHandler)
 
