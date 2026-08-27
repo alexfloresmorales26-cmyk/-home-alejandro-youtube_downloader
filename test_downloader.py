@@ -7,7 +7,13 @@ DESCRIPCION: Suite de pruebas unitarias para validar las funciones del descargad
 """
 
 import unittest
-from downloader import YouTubeDownloader, format_bytes, format_duration, has_ffmpeg, Colors
+from downloader import (
+    YouTubeDownloader,
+    format_bytes,
+    format_duration,
+    has_ffmpeg,
+    Colors,
+)
 
 
 class TestYouTubeDownloader(unittest.TestCase):
@@ -33,9 +39,9 @@ class TestYouTubeDownloader(unittest.TestCase):
 
     def test_colors_presence(self):
         """Verifica que las constantes de formato ANSI existan."""
-        self.assertTrue(hasattr(Colors, 'GREEN'))
-        self.assertTrue(hasattr(Colors, 'CYAN'))
-        self.assertTrue(hasattr(Colors, 'END'))
+        self.assertTrue(hasattr(Colors, "GREEN"))
+        self.assertTrue(hasattr(Colors, "CYAN"))
+        self.assertTrue(hasattr(Colors, "END"))
 
 
 if __name__ == "__main__":

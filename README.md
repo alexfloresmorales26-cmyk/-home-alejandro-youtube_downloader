@@ -70,3 +70,66 @@ youtube_downloader/
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `gunicorn app:app`
 4. ¡Listo! Obtendrás un enlace público para compartir.
+
+---
+
+## 🧰 Instalación y ejecución local (recomendado)
+
+1. Crear y activar un entorno virtual:
+
+   python3 -m venv .venv
+   source .venv/bin/activate
+
+2. Instalar dependencias de producción:
+
+   pip install --upgrade pip
+   pip install -r requirements.txt
+
+3. Instalar dependencias de desarrollo (opcional):
+
+   pip install -r requirements-dev.txt
+
+4. Ejecutar tests unitarios:
+
+   python -m unittest -v
+
+5. Ejecutar la aplicación en modo consola (CLI):
+
+   python main.py
+
+6. Ejecutar la aplicación como servidor Flask (modo web):
+
+   export FLASK_APP=app.py
+   FLASK_ENV=production
+   APP_MODE=flask gunicorn -b 0.0.0.0:8080 app:app
+
+---
+
+## 🐳 Docker (recomendado para despliegue)
+
+Construir la imagen Docker:
+
+  docker build -t youtube-downloader:latest .
+
+Ejecutar en modo consola (interactivo):
+
+  docker run --rm -it youtube-downloader:latest
+
+Ejecutar en modo Flask (servidor web, puerto 8080):
+
+  docker run --rm -p 8080:8080 -e APP_MODE=flask youtube-downloader:latest
+
+
+---
+
+## 🔧 Notas y requisitos del sistema
+
+- ffmpeg debe estar disponible en el sistema para habilitar conversiones de audio/video. El Dockerfile ya lo instala en la imagen.
+- Para que los commits automatizados realizados por los workflows cuenten como tus contributions, asegúrate de que el email del autor de los commits esté asociado a tu cuenta de GitHub.
+- Si deseas que las Actions hagan commits usando tu identidad, añade un Personal Access Token (PAT) con permisos `repo` en Settings → Secrets → Actions y lo configuraremos para usarlo.
+
+## 🩺 Solución rápida de problemas
+
+- Si una descarga falla al combinar video y audio, instala `ffmpeg` y vuelve a intentarlo.
+- Si el puerto 5000 está ocupado, inicia el servidor con otro puerto: `PORT=8080 python3 app.py`.
+- Si las contribuciones no aparecen en tu perfil, confirma que el email del commit esté verificado y que el PR se haya fusionado en la rama predeterminada.
