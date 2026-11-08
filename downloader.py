@@ -11,7 +11,7 @@ DESCRIPCION: Motor principal de descarga con yt-dlp.
 import os
 import sys
 import shutil
-from typing import Optional, Dict, Any, Callable, List
+from typing import Optional, Dict, Any, List
 import yt_dlp
 
 
@@ -128,7 +128,8 @@ class YouTubeDownloader:
 
         elif status == "finished":
             sys.stdout.write(
-                f"\n  {Colors.GREEN}✓ Descarga completada. Guardando archivo...{Colors.END}\n"
+                f"\n  {Colors.GREEN}✓ Descarga completada.\n"
+                f"  Guardando archivo...{Colors.END}\n"
             )
             sys.stdout.flush()
 
@@ -138,6 +139,7 @@ class YouTubeDownloader:
             "quiet": True,
             "no_warnings": True,
             "extract_flat": "in_playlist",
+            "remote_components": ["ejs:github"],
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             return ydl.extract_info(url, download=False)
@@ -173,6 +175,7 @@ class YouTubeDownloader:
             "progress_hooks": [self._progress_hook],
             "no_warnings": True,
             "quiet": True,
+            "remote_components": ["ejs:github"],
         }
 
         if download_subtitles:
@@ -212,6 +215,7 @@ class YouTubeDownloader:
                 "progress_hooks": [self._progress_hook],
                 "no_warnings": True,
                 "quiet": True,
+                "remote_components": ["ejs:github"],
             }
         else:
             ydl_opts = {
@@ -220,6 +224,7 @@ class YouTubeDownloader:
                 "progress_hooks": [self._progress_hook],
                 "no_warnings": True,
                 "quiet": True,
+                "remote_components": ["ejs:github"],
             }
 
         try:
@@ -265,6 +270,7 @@ class YouTubeDownloader:
             "progress_hooks": [self._progress_hook],
             "no_warnings": True,
             "quiet": True,
+            "remote_components": ["ejs:github"],
         }
 
         try:
@@ -284,6 +290,7 @@ class YouTubeDownloader:
             "outtmpl": outtmpl,
             "no_warnings": True,
             "quiet": True,
+            "remote_components": ["ejs:github"],
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -304,6 +311,7 @@ class YouTubeDownloader:
             "outtmpl": outtmpl,
             "no_warnings": True,
             "quiet": True,
+            "remote_components": ["ejs:github"],
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

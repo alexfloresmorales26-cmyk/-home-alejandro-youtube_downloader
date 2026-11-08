@@ -6,9 +6,8 @@ WORKDIR /app
 
 # Instalar dependencias del sistema (ffmpeg requerido para conversiones)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \ 
-       ffmpeg \ 
-       build-essential \ 
+    && apt-get install -y --no-install-recommends \
+       ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requisitos e instalar paquetes Python
