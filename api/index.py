@@ -15,9 +15,11 @@ import os as os_module
 import yt_dlp
 from downloader import YouTubeDownloader, format_duration, format_bytes, has_ffmpeg
 
-app = Flask(__name__,
+app = Flask(
+    __name__,
     template_folder=os_module.path.join(PROJECT_ROOT, "templates"),
-    static_folder=os_module.path.join(PROJECT_ROOT, "static"))
+    static_folder=os_module.path.join(PROJECT_ROOT, "static"),
+)
 
 BASE_DIR = PROJECT_ROOT
 TEMPLATES_DIR = os_module.path.join(BASE_DIR, "templates")
@@ -35,7 +37,12 @@ def api_info():
     url = data.get("url", "").strip()
 
     if not url:
-        return jsonify({"success": False, "error": "Debes ingresar una URL válida de YouTube."}), 400
+        return (
+            jsonify(
+                {"success": False, "error": "Debes ingresar una URL válida de YouTube."}
+            ),
+            400,
+        )
 
     ydl_opts = {
         "quiet": True,
@@ -52,14 +59,16 @@ def api_info():
 
     is_playlist = "entries" in info
     if is_playlist:
-        return jsonify({
-            "success": True,
-            "is_playlist": True,
-            "title": info.get("title", "Lista de Reproducción"),
-            "uploader": info.get("uploader", "Varios"),
-            "total_items": len(info.get("entries", [])),
-            "thumbnail": info.get("thumbnails", [{}])[-1].get("url", ""),
-        })
+        return jsonify(
+            {
+                "success": True,
+                "is_playlist": True,
+                "title": info.get("title", "Lista de Reproducción"),
+                "uploader": info.get("uploader", "Varios"),
+                "total_items": len(info.get("entries", [])),
+                "thumbnail": info.get("thumbnails", [{}])[-1].get("url", ""),
+            }
+        )
 
     formats = info.get("formats", [])
     heights = set()
@@ -68,18 +77,26 @@ def api_info():
             heights.add(f["height"])
 
     sorted_heights = sorted(list(heights), reverse=True)
-    resolutions = [f"{h}p" for h in sorted_heights] if sorted_heights else ["1080p", "720p", "480p", "360p"]
+    resolutions = (
+        [f"{h}p" for h in sorted_heights]
+        if sorted_heights
+        else ["1080p", "720p", "480p", "360p"]
+    )
 
-    return jsonify({
-        "success": True,
-        "is_playlist": False,
-        "title": info.get("title", "Sin título"),
-        "uploader": info.get("uploader", "Desconocido"),
-        "duration": format_duration(info.get("duration")),
-        "view_count": f"{info.get('view_count', 0):,}" if info.get("view_count") else "N/A",
-        "thumbnail": info.get("thumbnail", ""),
-        "resolutions": resolutions,
-    })
+    return jsonify(
+        {
+            "success": True,
+            "is_playlist": False,
+            "title": info.get("title", "Sin título"),
+            "uploader": info.get("uploader", "Desconocido"),
+            "duration": format_duration(info.get("duration")),
+            "view_count": f"{info.get('view_count', 0):,}"
+            if info.get("view_count")
+            else "N/A",
+            "thumbnail": info.get("thumbnail", ""),
+            "resolutions": resolutions,
+        }
+    )
 
 
 @app.route("/api/download", methods=["GET", "POST"])
@@ -112,16 +129,20 @@ def api_download():
                 "remote_components": ["ejs:github"],
             }
         elif download_type == "audio":
-            audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
+            audio_format = (
+                quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
+            )
             if ffmpeg_available:
                 ydl_opts = {
                     "format": "bestaudio/best",
                     "outtmpl": outtmpl,
-                    "postprocessors": [{
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": audio_format,
-                        "preferredquality": "192",
-                    }],
+                    "postprocessors": [
+                        {
+                            "key": "FFmpegExtractAudio",
+                            "preferredcodec": audio_format,
+                            "preferredquality": "192",
+                        }
+                    ],
                     "quiet": True,
                     "no_warnings": True,
                     "remote_components": ["ejs:github"],
@@ -155,7 +176,9 @@ def api_download():
                     )
             else:
                 if ffmpeg_available:
-                    format_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+                    format_str = (
+                        "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+                    )
                 else:
                     format_str = "best[ext=mp4]/best"
 
@@ -173,7 +196,15 @@ def api_download():
 
         files = glob.glob(os_module.path.join(temp_dir, "*"))
         if not files:
-            return jsonify({"success": False, "error": "No se pudo generar el archivo de descarga."}), 500
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "No se pudo generar el archivo de descarga.",
+                    }
+                ),
+                500,
+            )
 
         filepath = files[0]
         filename = os_module.path.basename(filepath)
