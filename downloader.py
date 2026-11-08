@@ -15,13 +15,13 @@ from typing import Optional, Dict, Any, List
 import yt_dlp
 
 
-
 # Lectura de cookies para YouTube (evita bloqueo de bot)
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
 COOKIES_PATH = None
 if COOKIES_CONTENT:
     import tempfile as _tempfile
+
     _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
     _cf.write(COOKIES_CONTENT)
     _cf.close()
@@ -35,6 +35,7 @@ def _ydl_opts_with_cookies(extra: dict) -> dict:
     if COOKIES_PATH:
         extra["cookiefile"] = COOKIES_PATH
     return extra
+
 
 # Códigos de colores ANSI para la consola
 class Colors:
