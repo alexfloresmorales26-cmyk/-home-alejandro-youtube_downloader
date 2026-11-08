@@ -1,25 +1,16 @@
-/* Estilos adicionales personalizados */
-@keyframes pulseGlow {
-    0%, 100% {
-        box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
-    }
-    50% {
-        box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
-    }
-}
-
-.active-tab {
-    border-bottom: 2px solid #ef4444 !important;
-    color: #f87171 !important;
-}
-
-.active-opt {
-    border-color: #ef4444 !important;
-    background-color: rgba(239, 68, 68, 0.15) !important;
-    color: #ffffff !important;
-}
-
-/* Transiciones suaves */
-button, input {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+@keyframes float { 0% { transform: translateY(0px) translateX(0px); } 33% { transform: translateY(-25px) translateX(15px); } 66% { transform: translateY(15px) translateX(-10px); } 100% { transform: translateY(0px) translateX(0px); } }
+@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); } 50% { box-shadow: 0 0 40px rgba(192, 132, 252, 0.6); } }
+.glass { background: rgba(15, 12, 35, 0.55); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(139, 92, 246, 0.18); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); }
+.glass-hover:hover { border-color: rgba(139, 92, 246, 0.45); box-shadow: 0 30px 60px -15px rgba(139, 92, 246, 0.25); transform: translateY(-4px); }
+.active-tab { border-bottom-color: #c084fc !important; color: #c084fc !important; }
+.active-opt { border-color: #c084fc !important; background-color: rgba(124, 58, 237, 0.18) !important; color: #ffffff !important; }
+button, input, select, textarea { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.url-input::placeholder { color: rgba(192, 132, 252, 0.45); }
+.res-btn { background: rgba(30, 25, 60, 0.5); border: 1px solid rgba(139, 92, 246, 0.15); color: #cbd5e1; }
+.res-btn:hover:not(.active-opt) { border-color: rgba(139, 92, 246, 0.4); background: rgba(30, 25, 60, 0.8); }
+::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #0f0c29; } ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #7c3aed, #a855f7); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #8b5cf6, #c084fc); }
+.audio-opt-btn { background: rgba(30, 25, 60, 0.5); border: 1px solid rgba(139, 92, 246, 0.15); color: #cbd5e1; }
+.audio-opt-btn:hover:not(.active-opt) { border-color: rgba(139, 92, 246, 0.4); background: rgba(30, 25, 60, 0.8); }
+.dot { box-shadow: 0 0 12px #22c55e; }
+input:focus, button:focus { outline: none; }
