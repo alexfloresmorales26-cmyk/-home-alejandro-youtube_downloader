@@ -23,6 +23,29 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
+# Lectura de cookies para YouTube (evita bloqueo de bot "Sign in to confirm")
+# ---------------------------------------------------------------------------
+COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
+COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
+COOKIES_PATH = None
+
+if COOKIES_CONTENT:
+    _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+    _cf.write(COOKIES_CONTENT)
+    _cf.close()
+    COOKIES_PATH = _cf.name
+elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
+    COOKIES_PATH = COOKIES_FILE
+
+
+def _ydl_opts_with_cookies(extra: dict) -> dict:
+    """Agrega cookies a las opciones de yt-dlp si están disponibles."""
+    if COOKIES_PATH:
+        extra["cookiefile"] = COOKIES_PATH
+    return extra
+
+
+# ---------------------------------------------------------------------------
 # Lógica común de procesamiento de API y render
 # ---------------------------------------------------------------------------
 def process_info_request(url: str) -> dict:
@@ -30,12 +53,12 @@ def process_info_request(url: str) -> dict:
     if not url:
         return {"success": False, "error": "Debes ingresar una URL válida de YouTube."}
 
-    ydl_opts = {
+    ydl_opts = _ydl_opts_with_cookies({
         "quiet": True,
         "no_warnings": True,
         "extract_flat": "in_playlist",
         "remote_components": ["ejs:github"],
-    }
+    })
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -87,17 +110,17 @@ def process_download_request(
     ffmpeg_available = has_ffmpeg()
 
     if download_type == "thumbnail":
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "writethumbnail": True,
             "skip_download": True,
             "outtmpl": outtmpl,
             "quiet": True,
             "remote_components": ["ejs:github"],
-        }
+        })
     elif download_type == "audio":
         audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
         if ffmpeg_available:
-            ydl_opts = {
+            ydl_opts = _ydl_opts_with_cookies({
                 "format": "bestaudio/best",
                 "outtmpl": outtmpl,
                 "postprocessors": [
@@ -109,19 +132,18 @@ def process_download_request(
                 ],
                 "quiet": True,
                 "remote_components": ["ejs:github"],
-            }
+            })
         else:
-            ydl_opts = {
+            ydl_opts = _ydl_opts_with_cookies({
                 "format": "bestaudio/best",
                 "outtmpl": outtmpl,
                 "quiet": True,
                 "remote_components": ["ejs:github"],
-            }
+            })
     else:  # video
         if quality and quality != "best":
             height = quality.replace("p", "")
             if ffmpeg_available:
-                # Respaldo: exacta → menor o igual → cualquier mp4 → mejor
                 format_str = (
                     f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
                     f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
@@ -145,13 +167,13 @@ def process_download_request(
             else:
                 format_str = "best[ext=mp4]/best"
 
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "format": format_str,
             "outtmpl": outtmpl,
             "merge_output_format": "mp4" if ffmpeg_available else None,
             "quiet": True,
             "remote_components": ["ejs:github"],
-        }
+        })
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
