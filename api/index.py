@@ -23,6 +23,32 @@ BASE_DIR = PROJECT_ROOT
 TEMPLATES_DIR = os_module.path.join(BASE_DIR, "templates")
 STATIC_DIR = os_module.path.join(BASE_DIR, "static")
 
+# ---------------------------------------------------------------------------
+# Lectura de cookies para YouTube (evita bloqueo de bot "Sign in to confirm")
+# ---------------------------------------------------------------------------
+COOKIES_FILE = os_module.environ.get("YTDLP_COOKIES_FILE", "")
+COOKIES_CONTENT = os_module.environ.get("YTDLP_COOKIES", "")
+COOKIES_PATH = None
+
+if COOKIES_CONTENT:
+    _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+    _cf.write(COOKIES_CONTENT)
+    _cf.close()
+    COOKIES_PATH = _cf.name
+elif COOKIES_FILE and os_module.path.exists(COOKIES_FILE):
+    COOKIES_PATH = COOKIES_FILE
+
+
+def _ydl_opts_with_cookies(extra: dict) -> dict:
+    """Agrega cookies a las opciones de yt-dlp si están disponibles."""
+    if COOKIES_PATH:
+        extra["cookiefile"] = COOKIES_PATH
+    return extra
+
+
+# ---------------------------------------------------------------------------
+# Rutas de la API
+# ---------------------------------------------------------------------------
 
 @app.route("/")
 def index():
@@ -37,12 +63,12 @@ def api_info():
     if not url:
         return jsonify({"success": False, "error": "Debes ingresar una URL válida de YouTube."}), 400
 
-    ydl_opts = {
+    ydl_opts = _ydl_opts_with_cookies({
         "quiet": True,
         "no_warnings": True,
         "extract_flat": "in_playlist",
         "remote_components": ["ejs:github"],
-    }
+    })
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -103,18 +129,18 @@ def api_download():
 
     try:
         if download_type == "thumbnail":
-            ydl_opts = {
+            ydl_opts = _ydl_opts_with_cookies({
                 "writethumbnail": True,
                 "skip_download": True,
                 "outtmpl": outtmpl,
                 "quiet": True,
                 "no_warnings": True,
                 "remote_components": ["ejs:github"],
-            }
+            })
         elif download_type == "audio":
             audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
             if ffmpeg_available:
-                ydl_opts = {
+                ydl_opts = _ydl_opts_with_cookies({
                     "format": "bestaudio/best",
                     "outtmpl": outtmpl,
                     "postprocessors": [{
@@ -125,15 +151,15 @@ def api_download():
                     "quiet": True,
                     "no_warnings": True,
                     "remote_components": ["ejs:github"],
-                }
+                })
             else:
-                ydl_opts = {
+                ydl_opts = _ydl_opts_with_cookies({
                     "format": "bestaudio/best",
                     "outtmpl": outtmpl,
                     "quiet": True,
                     "no_warnings": True,
                     "remote_components": ["ejs:github"],
-                }
+                })
         else:  # video
             if quality and quality != "best":
                 height = quality.replace("p", "")
@@ -159,14 +185,14 @@ def api_download():
                 else:
                     format_str = "best[ext=mp4]/best"
 
-            ydl_opts = {
+            ydl_opts = _ydl_opts_with_cookies({
                 "format": format_str,
                 "outtmpl": outtmpl,
                 "merge_output_format": "mp4" if ffmpeg_available else None,
                 "quiet": True,
                 "no_warnings": True,
                 "remote_components": ["ejs:github"],
-            }
+            })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
