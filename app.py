@@ -8,13 +8,12 @@ DESCRIPCION: Servidor Web para el Descargador de YouTube.
 """
 
 import os
-import sys
 import json
 import glob
 import tempfile
 import urllib.parse
 import yt_dlp
-from downloader import YouTubeDownloader, format_duration, format_bytes, has_ffmpeg
+from downloader import format_duration, has_ffmpeg
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
@@ -35,9 +34,13 @@ def process_info_request(url: str) -> dict:
         "quiet": True,
         "no_warnings": True,
         "extract_flat": "in_playlist",
+        "remote_components": ["ejs:github"],
     }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
     is_playlist = "entries" in info
     if is_playlist:
@@ -78,8 +81,8 @@ def process_info_request(url: str) -> dict:
 def process_download_request(
     url: str, download_type: str = "video", quality: str = "best"
 ) -> str:
-    """Descarga el video/audio/miniatura en una carpeta temporal y retorna la ruta del archivo."""
-    temp_dir = tempfile.mkdtemp(dir=DOWNLOADS_DIR)
+    """Descarga el archivo en una carpeta temporal y retorna su ruta."""
+    temp_dir = tempfile.mkdtemp()
     outtmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
     ffmpeg_available = has_ffmpeg()
 
@@ -89,6 +92,7 @@ def process_download_request(
             "skip_download": True,
             "outtmpl": outtmpl,
             "quiet": True,
+            "remote_components": ["ejs:github"],
         }
     elif download_type == "audio":
         audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
@@ -104,18 +108,20 @@ def process_download_request(
                     }
                 ],
                 "quiet": True,
+                "remote_components": ["ejs:github"],
             }
         else:
             ydl_opts = {
                 "format": "bestaudio/best",
                 "outtmpl": outtmpl,
                 "quiet": True,
+                "remote_components": ["ejs:github"],
             }
     else:  # video
         if quality and quality != "best":
             height = quality.replace("p", "")
             if ffmpeg_available:
-                # Cadena de respaldo completa: resolución exacta → menor o igual → cualquier mp4 → mejor disponible
+                # Respaldo: exacta → menor o igual → cualquier mp4 → mejor
                 format_str = (
                     f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
                     f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
@@ -144,10 +150,16 @@ def process_download_request(
             "outtmpl": outtmpl,
             "merge_output_format": "mp4" if ffmpeg_available else None,
             "quiet": True,
+            "remote_components": ["ejs:github"],
         }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    finally:
+        import shutil
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     files = glob.glob(os.path.join(temp_dir, "*"))
     if not files:
@@ -226,10 +238,9 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             rel_path = path[len("/static/") :]
             file_path = os.path.abspath(os.path.join(STATIC_DIR, rel_path))
             static_root = os.path.abspath(STATIC_DIR)
-            if (
-                os.path.commonpath([static_root, file_path]) == static_root
-                and os.path.isfile(file_path)
-            ):
+            if os.path.commonpath(
+                [static_root, file_path]
+            ) == static_root and os.path.isfile(file_path):
                 content_type = (
                     "text/css"
                     if file_path.endswith(".css")

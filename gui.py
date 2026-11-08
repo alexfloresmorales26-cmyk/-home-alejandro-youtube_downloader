@@ -7,8 +7,6 @@ DESCRIPCION: Lanzador de la Aplicación de Escritorio Nativa (Desktop GUI).
 =============================================================================
 """
 
-import os
-import sys
 import time
 import socket
 import threading
@@ -74,7 +72,7 @@ def main():
     print("\n[INFO] Deja esta terminal abierta mientras uses la aplicación.")
     print("[INFO] Para cerrar la aplicación, presiona Ctrl + C en esta terminal.\n")
 
-    # Lanzar la ventana en un hilo secundario mientras el servidor corre en el hilo principal
+    # Lanzar la ventana en un hilo secundario; el servidor corre en el principal
     threading.Thread(target=open_desktop_window, args=(url,), daemon=True).start()
 
     # Mantener el servidor escuchando de forma indefinida

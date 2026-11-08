@@ -7,7 +7,6 @@ DESCRIPCION: Interfaz de usuario interactiva y completa por consola.
 """
 
 import os
-import sys
 import argparse
 from downloader import YouTubeDownloader, format_duration, Colors
 
@@ -20,7 +19,8 @@ def clear_screen():
 def print_banner(output_dir: str, ffmpeg_status: bool):
     """Muestra el encabezado estilizado con estado del sistema."""
     status_ffmpeg = (
-        f"{Colors.GREEN}Disponible (Máxima resolución + Conversiones activas){Colors.END}"
+        f"{Colors.GREEN}Disponible (Máxima resolución + Conversiones"
+        f" activas){Colors.END}"
         if ffmpeg_status
         else f"{Colors.YELLOW}No instalado (Descargas nativas activas){Colors.END}"
     )
@@ -64,7 +64,8 @@ def interactive_mode(downloader: YouTubeDownloader):
         print(f"{Colors.BOLD}Selecciona una opción:{Colors.END}")
         print(f"  {Colors.GREEN}1.{Colors.END} Descargar Video (Máxima Calidad)")
         print(
-            f"  {Colors.GREEN}2.{Colors.END} Descargar Video (Elegir Resolución: 1080p, 720p, etc.)"
+            f"  {Colors.GREEN}2.{Colors.END} Descargar Video"
+            f" (Elegir Resolución: 1080p, 720p, etc.)"
         )
         print(
             f"  {Colors.GREEN}3.{Colors.END} Descargar solo Audio (MP3, M4A, WAV, FLAC)"
@@ -85,7 +86,8 @@ def interactive_mode(downloader: YouTubeDownloader):
 
         if choice == "9":
             print(
-                f"\n{Colors.GREEN}¡Gracias por usar el descargador! Hasta pronto.{Colors.END}\n"
+                f"\n{Colors.GREEN}¡Gracias por usar el descargador!"
+                f" Hasta pronto.{Colors.END}\n"
             )
             break
 
@@ -97,7 +99,8 @@ def interactive_mode(downloader: YouTubeDownloader):
                 downloader.output_dir = os.path.abspath(new_path)
                 os.makedirs(downloader.output_dir, exist_ok=True)
                 print(
-                    f"{Colors.GREEN}✓ Carpeta actualizada a: {downloader.output_dir}{Colors.END}"
+                    f"{Colors.GREEN}✓ Carpeta actualizada a:"
+                    f" {downloader.output_dir}{Colors.END}"
                 )
             input("\nPresiona Enter para continuar...")
             continue
@@ -125,7 +128,8 @@ def interactive_mode(downloader: YouTubeDownloader):
                 ok = downloader.download_video(url)
                 if ok:
                     print(
-                        f"\n{Colors.GREEN}✓ Video guardado exitosamente en: {downloader.output_dir}{Colors.END}\n"
+                        f"\n{Colors.GREEN}✓ Video guardado exitosamente en:"
+                        f" {downloader.output_dir}{Colors.END}\n"
                     )
 
             # 2. Video con resolución personalizada
@@ -142,23 +146,27 @@ def interactive_mode(downloader: YouTubeDownloader):
                     print(f"  {Colors.GREEN}{idx}.{Colors.END} {res}")
 
                 res_choice = input(
-                    f"\n{Colors.BOLD}Elige resolución [1-{len(resolutions)}]: {Colors.END}"
+                    f"\n{Colors.BOLD}Elige resolución"
+                    f" [1-{len(resolutions)}]: {Colors.END}"
                 ).strip()
                 selected_res = None
                 if res_choice.isdigit() and 1 <= int(res_choice) <= len(resolutions):
                     selected_res = resolutions[int(res_choice) - 1]
                 else:
                     print(
-                        f"{Colors.YELLOW}[!] Opción no válida. Se usará la mejor resolución disponible.{Colors.END}"
+                        f"{Colors.YELLOW}[!] Opción no válida."
+                        f" Se usará la mejor resolución disponible.{Colors.END}"
                     )
 
                 print(
-                    f"\n{Colors.BOLD}Descargando en {selected_res or 'máxima calidad'}...{Colors.END}"
+                    f"\n{Colors.BOLD}Descargando en"
+                    f" {selected_res or 'máxima calidad'}...{Colors.END}"
                 )
                 ok = downloader.download_video(url, resolution=selected_res)
                 if ok:
                     print(
-                        f"\n{Colors.GREEN}✓ Video guardado exitosamente en: {downloader.output_dir}{Colors.END}\n"
+                        f"\n{Colors.GREEN}✓ Video guardado exitosamente en:"
+                        f" {downloader.output_dir}{Colors.END}\n"
                     )
 
             # 3. Descargar solo audio
@@ -176,12 +184,14 @@ def interactive_mode(downloader: YouTubeDownloader):
                 info = downloader.get_info(url)
                 show_video_details(info)
                 print(
-                    f"{Colors.BOLD}Iniciando descarga de audio ({audio_fmt.upper()})...{Colors.END}"
+                    f"{Colors.BOLD}Iniciando descarga de audio"
+                    f" ({audio_fmt.upper()})...{Colors.END}"
                 )
                 ok = downloader.download_audio(url, audio_format=audio_fmt)
                 if ok:
                     print(
-                        f"\n{Colors.GREEN}✓ Audio guardado exitosamente en: {downloader.output_dir}{Colors.END}\n"
+                        f"\n{Colors.GREEN}✓ Audio guardado exitosamente en:"
+                        f" {downloader.output_dir}{Colors.END}\n"
                     )
 
             # 4. Playlist
@@ -200,29 +210,34 @@ def interactive_mode(downloader: YouTubeDownloader):
                 ok = downloader.download_playlist(url, audio_only=audio_only)
                 if ok:
                     print(
-                        f"\n{Colors.GREEN}✓ Playlist descargada exitosamente en: {downloader.output_dir}{Colors.END}\n"
+                        f"\n{Colors.GREEN}✓ Playlist descargada exitosamente en:"
+                        f" {downloader.output_dir}{Colors.END}\n"
                     )
 
             # 5. Miniatura
             elif choice == "5":
                 print(
-                    f"\n{Colors.CYAN}Descargando miniatura en alta resolución...{Colors.END}"
+                    f"\n{Colors.CYAN}Descargando miniatura en"
+                    f" alta resolución...{Colors.END}"
                 )
                 ok = downloader.download_thumbnail(url)
                 if ok:
                     print(
-                        f"\n{Colors.GREEN}✓ Miniatura guardada en: {downloader.output_dir}{Colors.END}\n"
+                        f"\n{Colors.GREEN}✓ Miniatura guardada en:"
+                        f" {downloader.output_dir}{Colors.END}\n"
                     )
 
             # 6. Subtítulos
             elif choice == "6":
                 print(
-                    f"\n{Colors.CYAN}Descargando subtítulos en español e inglés...{Colors.END}"
+                    f"\n{Colors.CYAN}Descargando subtítulos en"
+                    f" español e inglés...{Colors.END}"
                 )
                 ok = downloader.download_subtitles(url, lang="es")
                 if ok:
                     print(
-                        f"\n{Colors.GREEN}✓ Subtítulos guardados en: {downloader.output_dir}{Colors.END}\n"
+                        f"\n{Colors.GREEN}✓ Subtítulos guardados en:"
+                        f" {downloader.output_dir}{Colors.END}\n"
                     )
 
             # 7. Información

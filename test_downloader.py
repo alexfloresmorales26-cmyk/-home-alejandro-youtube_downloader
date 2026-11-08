@@ -11,7 +11,6 @@ from downloader import (
     YouTubeDownloader,
     format_bytes,
     format_duration,
-    has_ffmpeg,
     Colors,
 )
 
