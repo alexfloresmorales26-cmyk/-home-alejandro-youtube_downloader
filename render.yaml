@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: youtube-downloader
+    env: docker
+    repo: https://github.com/alexfloresmorales26-cmyk/-home-alejandro-youtube_downloader.git
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: APP_MODE
+        value: flask
