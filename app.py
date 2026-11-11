@@ -37,7 +37,7 @@ def validate_youtube_url(url: str) -> tuple[bool, str]:
     url = url.strip()
 
     if not YOUTUBE_URL_REGEX.match(url):
-        return False,
+        return (False,)
         "La URL no parece ser de YouTube. Ejemplos válidos:\n"
         "  • https://www.youtube.com/watch?v=VIDEO_ID\n"
         "  • https://youtu.be/VIDEO_ID\n"
@@ -202,9 +202,7 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
                 COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE}, reparado)"
                 COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
             else:
-                COOKIES_ERROR = (
-                    f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
-                )
+                COOKIES_ERROR = f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
@@ -234,12 +232,14 @@ def process_info_request(url: str) -> dict:
     if not es_valido:
         return {"success": False, "error": mensaje}
 
-    ydl_opts = _ydl_opts_with_cookies({
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": "in_playlist",
-        "remote_components": ["ejs:github"],
-    })
+    ydl_opts = _ydl_opts_with_cookies(
+        {
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": "in_playlist",
+            "remote_components": ["ejs:github"],
+        }
+    )
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -295,36 +295,42 @@ def process_download_request(
     ffmpeg_available = has_ffmpeg()
 
     if download_type == "thumbnail":
-        ydl_opts = _ydl_opts_with_cookies({
-            "writethumbnail": True,
-            "skip_download": True,
-            "outtmpl": outtmpl,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "writethumbnail": True,
+                "skip_download": True,
+                "outtmpl": outtmpl,
+                "quiet": True,
+                "remote_components": ["ejs:github"],
+            }
+        )
     elif download_type == "audio":
         audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
         if ffmpeg_available:
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": "bestaudio/best",
-                "outtmpl": outtmpl,
-                "postprocessors": [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": audio_format,
-                        "preferredquality": "192",
-                    }
-                ],
-                "quiet": True,
-                "remote_components": ["ejs:github"],
-            })
+            ydl_opts = _ydl_opts_with_cookies(
+                {
+                    "format": "bestaudio/best",
+                    "outtmpl": outtmpl,
+                    "postprocessors": [
+                        {
+                            "key": "FFmpegExtractAudio",
+                            "preferredcodec": audio_format,
+                            "preferredquality": "192",
+                        }
+                    ],
+                    "quiet": True,
+                    "remote_components": ["ejs:github"],
+                }
+            )
         else:
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": "bestaudio/best",
-                "outtmpl": outtmpl,
-                "quiet": True,
-                "remote_components": ["ejs:github"],
-            })
+            ydl_opts = _ydl_opts_with_cookies(
+                {
+                    "format": "bestaudio/best",
+                    "outtmpl": outtmpl,
+                    "quiet": True,
+                    "remote_components": ["ejs:github"],
+                }
+            )
     else:  # video
         if quality and quality != "best":
             height = quality.replace("p", "")
@@ -352,13 +358,15 @@ def process_download_request(
             else:
                 format_str = "best[ext=mp4]/best"
 
-        ydl_opts = _ydl_opts_with_cookies({
-            "format": format_str,
-            "outtmpl": outtmpl,
-            "merge_output_format": "mp4" if ffmpeg_available else None,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "format": format_str,
+                "outtmpl": outtmpl,
+                "merge_output_format": "mp4" if ffmpeg_available else None,
+                "quiet": True,
+                "remote_components": ["ejs:github"],
+            }
+        )
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -426,19 +434,22 @@ try:
             except Exception:
                 cookiefile_readable = False
 
-        return jsonify({
-            "cookies_configured": COOKIES_PATH is not None or bool(COOKIES_FROM_BROWSER),
-            "cookies_valid": COOKIES_VALID,
-            "cookies_source": COOKIES_SOURCE,
-            "cookies_path": COOKIES_PATH,
-            "cookies_from_browser": COOKIES_FROM_BROWSER,
-            "cookiefile_exists": cookiefile_exists,
-            "cookiefile_readable": cookiefile_readable,
-            "cookiefile_size": cookiefile_size,
-            "cookies_error": COOKIES_ERROR,
-            "ffmpeg_available": has_ffmpeg(),
-            "yt_dlp_installed": True,
-        })
+        return jsonify(
+            {
+                "cookies_configured": COOKIES_PATH is not None
+                or bool(COOKIES_FROM_BROWSER),
+                "cookies_valid": COOKIES_VALID,
+                "cookies_source": COOKIES_SOURCE,
+                "cookies_path": COOKIES_PATH,
+                "cookies_from_browser": COOKIES_FROM_BROWSER,
+                "cookiefile_exists": cookiefile_exists,
+                "cookiefile_readable": cookiefile_readable,
+                "cookiefile_size": cookiefile_size,
+                "cookies_error": COOKIES_ERROR,
+                "ffmpeg_available": has_ffmpeg(),
+                "yt_dlp_installed": True,
+            }
+        )
 
     @app.route("/api/cleanup", methods=["POST"])
     def api_cleanup():
@@ -524,7 +535,9 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             quality = query.get("quality", ["best"])[0]
 
             try:
-                content, filename = process_download_request(url, download_type, quality)
+                content, filename = process_download_request(
+                    url, download_type, quality
+                )
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
