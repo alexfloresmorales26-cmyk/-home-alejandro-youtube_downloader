@@ -26,3 +26,4 @@ downloads/
 *.swp
 *.swo
 .venv/
+cookies.txt
