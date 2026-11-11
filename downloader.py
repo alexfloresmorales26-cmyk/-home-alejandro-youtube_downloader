@@ -20,9 +20,11 @@ import yt_dlp
 # Lectura de cookies para YouTube (evita bloqueo de bot)
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
+COOKIES_FROM_BROWSER = os.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
 COOKIES_PATH: str | None = None
 COOKIES_VALID = False
 COOKIES_ERROR = ""
+COOKIES_SOURCE = "none"
 
 
 def _is_netscape_cookies(content: str) -> bool:
@@ -74,6 +76,7 @@ if COOKIES_CONTENT:
             _cf.close()
             COOKIES_PATH = str(_cf.name)
             COOKIES_VALID = True
+            COOKIES_SOURCE = "YTDLP_COOKIES (reparado)"
             COOKIES_ERROR = "Cookies reparadas automáticamente (formato ajustado)."
         else:
             COOKIES_ERROR = (
@@ -88,6 +91,7 @@ if COOKIES_CONTENT:
         _cf.close()
         COOKIES_PATH = str(_cf.name)
         COOKIES_VALID = True
+        COOKIES_SOURCE = "YTDLP_COOKIES"
 elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
     try:
         with open(COOKIES_FILE, "r", encoding="utf-8") as f:
@@ -99,6 +103,7 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
                     f.write(fixed)
                 COOKIES_PATH = str(COOKIES_FILE)
                 COOKIES_VALID = True
+                COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE}, reparado)"
                 COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
             else:
                 COOKIES_ERROR = (
@@ -107,8 +112,21 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
+            COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE})"
     except Exception as e:
         COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {e}"
+elif COOKIES_FROM_BROWSER:
+    COOKIES_VALID = True
+    COOKIES_SOURCE = f"YTDLP_COOKIES_FROM_BROWSER ({COOKIES_FROM_BROWSER})"
+
+
+def _ydl_opts_with_cookies(extra: dict) -> dict:
+    """Agrega cookies a las opciones de yt-dlp si están disponibles."""
+    if COOKIES_PATH:
+        extra["cookiefile"] = COOKIES_PATH
+    if COOKIES_FROM_BROWSER:
+        extra["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
+    return extra
 
 
 def _ydl_opts_with_cookies(extra: dict) -> dict:
