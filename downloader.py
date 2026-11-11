@@ -20,14 +20,52 @@ import yt_dlp
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
 COOKIES_PATH: str | None = None
+COOKIES_VALID = False
+COOKIES_ERROR = ""
+
+
+def _is_netscape_cookies(content: str) -> bool:
+    """Verifica si el contenido tiene formato Netscape cookies.txt."""
+    if not content or not content.strip():
+        return False
+    lines = content.strip().splitlines()
+    valid_lines = 0
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        fields = stripped.split("\t")
+        if len(fields) >= 7:
+            valid_lines += 1
+    return valid_lines > 0
+
+
 if COOKIES_CONTENT:
-    import tempfile as _tempfile
-    _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
-    _cf.write(COOKIES_CONTENT)
-    _cf.close()
-    COOKIES_PATH = str(_cf.name)
+    if not _is_netscape_cookies(COOKIES_CONTENT):
+        COOKIES_ERROR = (
+            "El contenido de YTDLP_COOKIES no parece ser un archivo cookies.txt "
+            "en formato Netscape."
+        )
+    else:
+        import tempfile as _tempfile
+        _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+        _cf.write(COOKIES_CONTENT)
+        _cf.close()
+        COOKIES_PATH = str(_cf.name)
+        COOKIES_VALID = True
 elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
-    COOKIES_PATH = str(COOKIES_FILE)
+    try:
+        with open(COOKIES_FILE, "r", encoding="utf-8") as f:
+            file_content = f.read()
+        if not _is_netscape_cookies(file_content):
+            COOKIES_ERROR = (
+                f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
+            )
+        else:
+            COOKIES_PATH = str(COOKIES_FILE)
+            COOKIES_VALID = True
+    except Exception as e:
+        COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {e}"
 
 
 def _ydl_opts_with_cookies(extra: dict) -> dict:
