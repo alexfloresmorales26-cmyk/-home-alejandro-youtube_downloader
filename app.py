@@ -13,6 +13,8 @@ import glob
 import tempfile
 import urllib.parse
 import re
+import time
+import shutil
 import yt_dlp
 from downloader import format_duration, has_ffmpeg
 
@@ -42,6 +44,67 @@ def validate_youtube_url(url: str) -> tuple[bool, str]:
         "  • https://www.youtube.com/playlist?list=PLAYLIST_ID"
 
     return True, ""
+
+
+# ---------------------------------------------------------------------------
+# Limpieza automática de archivos temporales
+# ---------------------------------------------------------------------------
+def cleanup_temp_dirs(max_age_hours: int = 2) -> dict:
+    """Elimina directorios temporales huérfanos de descargas previas.
+
+    Busca en /tmp directorios que coincidan con el patrón de tempfile.mkdtemp()
+    y tienen más de max_age_hours de antigüedad.
+
+    Retorna un resumen de lo limpiado.
+    """
+    cleaned = 0
+    errors = 0
+    freed_mb = 0.0
+
+    try:
+        tmp_dir = tempfile.gettempdir()
+        for entry in os.listdir(tmp_dir):
+            entry_path = os.path.join(tmp_dir, entry)
+            if not os.path.isdir(entry_path):
+                continue
+
+            # Solo limpiar directorios temporales (empiezan con tmp)
+            if not entry.startswith("tmp"):
+                continue
+
+            try:
+                # Verificar antigüedad (mtime)
+                mtime = os.path.getmtime(entry_path)
+                age_hours = (time.time() - mtime) / 3600.0
+
+                if age_hours > max_age_hours:
+                    # Calcular tamaño antes de borrar
+                    size = 0
+                    for root, _dirs, files in os.walk(entry_path):
+                        for f in files:
+                            try:
+                                size += os.path.getsize(os.path.join(root, f))
+                            except OSError:
+                                pass
+
+                    shutil.rmtree(entry_path, ignore_errors=True)
+                    cleaned += 1
+                    freed_mb += size / (1024 * 1024)
+            except OSError:
+                errors += 1
+    except OSError:
+        pass
+
+    return {
+        "cleaned_dirs": cleaned,
+        "errors": errors,
+        "freed_mb": round(freed_mb, 2),
+    }
+
+
+# Ejecutar limpieza al iniciar el módulo
+CLEANUP_RESULT = cleanup_temp_dirs(max_age_hours=2)
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
@@ -376,6 +439,12 @@ try:
             "ffmpeg_available": has_ffmpeg(),
             "yt_dlp_installed": True,
         })
+
+    @app.route("/api/cleanup", methods=["POST"])
+    def api_cleanup():
+        """Endpoint para limpieza manual de archivos temporales."""
+        result = cleanup_temp_dirs(max_age_hours=2)
+        return jsonify({"success": True, "cleanup": result})
 
     @app.route("/api/download", methods=["GET", "POST"])
     def api_download():
