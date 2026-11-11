@@ -28,14 +28,53 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
 COOKIES_PATH: str | None = None
+COOKIES_VALID = False
+COOKIES_ERROR = ""
+
+
+def _is_netscape_cookies(content: str) -> bool:
+    """Verifica si el contenido tiene formato Netscape cookies.txt."""
+    if not content or not content.strip():
+        return False
+    lines = content.strip().splitlines()
+    # Buscar líneas con al menos 6 tabuladores (7 campos: domain, flag, path, secure, expires, name, value)
+    valid_lines = 0
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        fields = stripped.split("\t")
+        if len(fields) >= 7:
+            valid_lines += 1
+    return valid_lines > 0
+
 
 if COOKIES_CONTENT:
-    _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
-    _cf.write(COOKIES_CONTENT)
-    _cf.close()
-    COOKIES_PATH = str(_cf.name)
+    if not _is_netscape_cookies(COOKIES_CONTENT):
+        COOKIES_ERROR = (
+            "El contenido de YTDLP_COOKIES no parece ser un archivo cookies.txt "
+            "en formato Netscape. Asegúrate de exportarlo con la extensión "
+            "'Get cookies.txt LOCALLY' desde youtube.com."
+        )
+    else:
+        _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+        _cf.write(COOKIES_CONTENT)
+        _cf.close()
+        COOKIES_PATH = str(_cf.name)
+        COOKIES_VALID = True
 elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
-    COOKIES_PATH = str(COOKIES_FILE)
+    try:
+        with open(COOKIES_FILE, "r", encoding="utf-8") as f:
+            file_content = f.read()
+        if not _is_netscape_cookies(file_content):
+            COOKIES_ERROR = (
+                f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
+            )
+        else:
+            COOKIES_PATH = str(COOKIES_FILE)
+            COOKIES_VALID = True
+    except Exception as e:
+        COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {e}"
 
 
 def _ydl_opts_with_cookies(extra: dict) -> dict:
@@ -228,10 +267,12 @@ try:
         """Endpoint de diagnóstico: verifica si las cookies de YouTube están configuradas."""
         return jsonify({
             "cookies_configured": COOKIES_PATH is not None,
+            "cookies_valid": COOKIES_VALID,
             "cookies_source": "YTDLP_COOKIES" if COOKIES_CONTENT else (
                 "YTDLP_COOKIES_FILE" if COOKIES_FILE else "none"
             ),
             "cookies_path": COOKIES_PATH,
+            "cookies_error": COOKIES_ERROR,
             "ffmpeg_available": has_ffmpeg(),
         })
 
