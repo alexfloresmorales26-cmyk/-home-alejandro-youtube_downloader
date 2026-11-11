@@ -32,6 +32,16 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentType = "video"; // 'video' | 'audio' | 'thumbnail'
     let currentQuality = "best"; // '1080p', '720p', etc. o 'mp3', 'm4a', etc.
 
+    // ---------------------------------------------------------------------------
+    // Validación de URL de YouTube (frontend)
+    // ---------------------------------------------------------------------------
+    const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)[a-zA-Z0-9_-]+([&?].*)?$/;
+
+    function isValidYouTubeUrl(url) {
+        if (!url || !url.trim()) return false;
+        return YOUTUBE_URL_REGEX.test(url.trim());
+    }
+
     // Cambiar pestañas
     function switchTab(type) {
         currentType = type;
@@ -75,7 +85,20 @@ document.addEventListener("DOMContentLoaded", () => {
     searchForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const url = videoUrlInput.value.trim();
-        if (!url) return;
+
+        if (!url) {
+            showError("Debes ingresar una URL de YouTube.");
+            return;
+        }
+
+        if (!isValidYouTubeUrl(url)) {
+            showError(
+                "La URL no parece ser de YouTube. Usa un formato como:\n" +
+                "https://www.youtube.com/watch?v=VIDEO_ID\n" +
+                "https://youtu.be/VIDEO_ID"
+            );
+            return;
+        }
 
         currentUrl = url;
         errorCard.classList.add("hidden");
