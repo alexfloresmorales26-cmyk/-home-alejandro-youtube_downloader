@@ -195,6 +195,21 @@ def api_info():
 @app.route("/api/cookies-status", methods=["GET"])
 def api_cookies_status():
     """Endpoint de diagnóstico: verifica si las cookies de YouTube están configuradas."""
+    import os as _os
+
+    cookiefile_exists = False
+    cookiefile_readable = False
+    cookiefile_size = 0
+    if COOKIES_PATH and _os.path.exists(COOKIES_PATH):
+        cookiefile_exists = True
+        try:
+            cookiefile_size = _os.path.getsize(COOKIES_PATH)
+            with open(COOKIES_PATH, "r") as _f:
+                _f.read(1)
+            cookiefile_readable = True
+        except Exception:
+            cookiefile_readable = False
+
     return jsonify({
         "cookies_configured": COOKIES_PATH is not None,
         "cookies_valid": COOKIES_VALID,
@@ -202,8 +217,12 @@ def api_cookies_status():
             "YTDLP_COOKIES_FILE" if COOKIES_FILE else "none"
         ),
         "cookies_path": COOKIES_PATH,
+        "cookiefile_exists": cookiefile_exists,
+        "cookiefile_readable": cookiefile_readable,
+        "cookiefile_size": cookiefile_size,
         "cookies_error": COOKIES_ERROR,
         "ffmpeg_available": has_ffmpeg(),
+        "yt_dlp_installed": True,
     })
 
 
