@@ -29,9 +29,11 @@ STATIC_DIR = os_module.path.join(BASE_DIR, "static")
 # ---------------------------------------------------------------------------
 COOKIES_FILE = os_module.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os_module.environ.get("YTDLP_COOKIES", "")
+COOKIES_FROM_BROWSER = os_module.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
 COOKIES_PATH: str | None = None
 COOKIES_VALID = False
 COOKIES_ERROR = ""
+COOKIES_SOURCE = "none"
 
 
 def _is_netscape_cookies(content: str) -> bool:
@@ -51,12 +53,7 @@ def _is_netscape_cookies(content: str) -> bool:
 
 
 def _fix_netscape_cookies(content: str) -> str:
-    """Intenta reparar automáticamente el formato Netscape cookies.txt.
-    
-    - Convierte múltiples espacios a tabuladores
-    - Elimina texto no-cookie después de la última línea válida
-    - Filtra líneas que no tengan al menos 7 campos
-    """
+    """Intenta reparar automáticamente el formato Netscape cookies.txt."""
     if not content or not content.strip():
         return content
 
@@ -87,6 +84,7 @@ if COOKIES_CONTENT:
             _cf.close()
             COOKIES_PATH = str(_cf.name)
             COOKIES_VALID = True
+            COOKIES_SOURCE = "YTDLP_COOKIES (reparado)"
             COOKIES_ERROR = "Cookies reparadas automáticamente (formato ajustado)."
         else:
             COOKIES_ERROR = (
@@ -100,6 +98,7 @@ if COOKIES_CONTENT:
         _cf.close()
         COOKIES_PATH = str(_cf.name)
         COOKIES_VALID = True
+        COOKIES_SOURCE = "YTDLP_COOKIES"
 elif COOKIES_FILE and os_module.path.exists(COOKIES_FILE):
     try:
         with open(COOKIES_FILE, "r", encoding="utf-8") as f:
@@ -111,6 +110,7 @@ elif COOKIES_FILE and os_module.path.exists(COOKIES_FILE):
                     f.write(fixed)
                 COOKIES_PATH = str(COOKIES_FILE)
                 COOKIES_VALID = True
+                COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE}, reparado)"
                 COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
             else:
                 COOKIES_ERROR = (
@@ -119,14 +119,20 @@ elif COOKIES_FILE and os_module.path.exists(COOKIES_FILE):
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
+            COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE})"
     except Exception as e:
         COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {e}"
+elif COOKIES_FROM_BROWSER:
+    COOKIES_VALID = True
+    COOKIES_SOURCE = f"YTDLP_COOKIES_FROM_BROWSER ({COOKIES_FROM_BROWSER})"
 
 
 def _ydl_opts_with_cookies(extra: dict) -> dict:
     """Agrega cookies a las opciones de yt-dlp si están disponibles."""
     if COOKIES_PATH:
         extra["cookiefile"] = COOKIES_PATH
+    if COOKIES_FROM_BROWSER:
+        extra["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
     return extra
 
 
@@ -211,12 +217,11 @@ def api_cookies_status():
             cookiefile_readable = False
 
     return jsonify({
-        "cookies_configured": COOKIES_PATH is not None,
+        "cookies_configured": COOKIES_PATH is not None or bool(COOKIES_FROM_BROWSER),
         "cookies_valid": COOKIES_VALID,
-        "cookies_source": "YTDLP_COOKIES" if COOKIES_CONTENT else (
-            "YTDLP_COOKIES_FILE" if COOKIES_FILE else "none"
-        ),
+        "cookies_source": COOKIES_SOURCE,
         "cookies_path": COOKIES_PATH,
+        "cookies_from_browser": COOKIES_FROM_BROWSER,
         "cookiefile_exists": cookiefile_exists,
         "cookiefile_readable": cookiefile_readable,
         "cookiefile_size": cookiefile_size,

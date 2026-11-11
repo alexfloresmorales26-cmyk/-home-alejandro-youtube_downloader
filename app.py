@@ -28,9 +28,11 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 # ---------------------------------------------------------------------------
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
+COOKIES_FROM_BROWSER = os.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
 COOKIES_PATH: str | None = None
 COOKIES_VALID = False
 COOKIES_ERROR = ""
+COOKIES_SOURCE = "none"
 
 
 def _is_netscape_cookies(content: str) -> bool:
@@ -43,7 +45,6 @@ def _is_netscape_cookies(content: str) -> bool:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        # Aceptar tanto tabuladores como múltiples espacios como separadores
         fields = [f for f in re.split(r"[\t ]{2,}", stripped) if f]
         if len(fields) >= 7:
             valid_lines += 1
@@ -51,12 +52,7 @@ def _is_netscape_cookies(content: str) -> bool:
 
 
 def _fix_netscape_cookies(content: str) -> str:
-    """Intenta reparar automáticamente el formato Netscape cookies.txt.
-    
-    - Convierte múltiples espacios a tabuladores
-    - Elimina texto no-cookie después de la última línea válida
-    - Filtra líneas que no tengan al menos 7 campos
-    """
+    """Intenta reparar automáticamente el formato Netscape cookies.txt."""
     if not content or not content.strip():
         return content
 
@@ -67,12 +63,10 @@ def _fix_netscape_cookies(content: str) -> str:
         if not stripped or stripped.startswith("#"):
             fixed_lines.append(stripped)
             continue
-        # Convertir 2+ espacios a tabulador
         normalized = re.sub(r"[\t ]{2,}", "\t", stripped)
         fields = normalized.split("\t")
         if len(fields) >= 7:
             fixed_lines.append(normalized)
-        # Si una línea no tiene 7 campos, asumir que es texto extra y detenerse
         elif fixed_lines:
             break
 
@@ -81,7 +75,6 @@ def _fix_netscape_cookies(content: str) -> str:
 
 if COOKIES_CONTENT:
     if not _is_netscape_cookies(COOKIES_CONTENT):
-        # Intentar reparar automáticamente
         fixed = _fix_netscape_cookies(COOKIES_CONTENT)
         if fixed != COOKIES_CONTENT and _is_netscape_cookies(fixed):
             COOKIES_CONTENT = fixed
@@ -90,6 +83,7 @@ if COOKIES_CONTENT:
             _cf.close()
             COOKIES_PATH = str(_cf.name)
             COOKIES_VALID = True
+            COOKIES_SOURCE = "YTDLP_COOKIES (reparado)"
             COOKIES_ERROR = "Cookies reparadas automáticamente (formato ajustado)."
         else:
             COOKIES_ERROR = (
@@ -103,6 +97,7 @@ if COOKIES_CONTENT:
         _cf.close()
         COOKIES_PATH = str(_cf.name)
         COOKIES_VALID = True
+        COOKIES_SOURCE = "YTDLP_COOKIES"
 elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
     try:
         with open(COOKIES_FILE, "r", encoding="utf-8") as f:
@@ -110,11 +105,11 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
         if not _is_netscape_cookies(file_content):
             fixed = _fix_netscape_cookies(file_content)
             if fixed != file_content and _is_netscape_cookies(fixed):
-                # Escribir el archivo reparado
                 with open(COOKIES_FILE, "w", encoding="utf-8") as f:
                     f.write(fixed)
                 COOKIES_PATH = str(COOKIES_FILE)
                 COOKIES_VALID = True
+                COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE}, reparado)"
                 COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
             else:
                 COOKIES_ERROR = (
@@ -123,14 +118,20 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
+            COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE})"
     except Exception as e:
         COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {e}"
+elif COOKIES_FROM_BROWSER:
+    COOKIES_VALID = True
+    COOKIES_SOURCE = f"YTDLP_COOKIES_FROM_BROWSER ({COOKIES_FROM_BROWSER})"
 
 
 def _ydl_opts_with_cookies(extra: dict) -> dict:
     """Agrega cookies a las opciones de yt-dlp si están disponibles."""
     if COOKIES_PATH:
         extra["cookiefile"] = COOKIES_PATH
+    if COOKIES_FROM_BROWSER:
+        extra["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
     return extra
 
 
@@ -331,12 +332,11 @@ try:
                 cookiefile_readable = False
 
         return jsonify({
-            "cookies_configured": COOKIES_PATH is not None,
+            "cookies_configured": COOKIES_PATH is not None or bool(COOKIES_FROM_BROWSER),
             "cookies_valid": COOKIES_VALID,
-            "cookies_source": "YTDLP_COOKIES" if COOKIES_CONTENT else (
-                "YTDLP_COOKIES_FILE" if COOKIES_FILE else "none"
-            ),
+            "cookies_source": COOKIES_SOURCE,
             "cookies_path": COOKIES_PATH,
+            "cookies_from_browser": COOKIES_FROM_BROWSER,
             "cookiefile_exists": cookiefile_exists,
             "cookiefile_readable": cookiefile_readable,
             "cookiefile_size": cookiefile_size,
