@@ -11,6 +11,7 @@ DESCRIPCION: Motor principal de descarga con yt-dlp.
 import os
 import sys
 import shutil
+import re
 from typing import Optional, Dict, Any, List
 import yt_dlp
 
@@ -34,18 +35,52 @@ def _is_netscape_cookies(content: str) -> bool:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        fields = stripped.split("\t")
+        fields = [f for f in re.split(r"[\t ]{2,}", stripped) if f]
         if len(fields) >= 7:
             valid_lines += 1
     return valid_lines > 0
 
 
+def _fix_netscape_cookies(content: str) -> str:
+    """Intenta reparar automáticamente el formato Netscape cookies.txt."""
+    if not content or not content.strip():
+        return content
+
+    lines = content.strip().splitlines()
+    fixed_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            fixed_lines.append(stripped)
+            continue
+        normalized = re.sub(r"[\t ]{2,}", "\t", stripped)
+        fields = normalized.split("\t")
+        if len(fields) >= 7:
+            fixed_lines.append(normalized)
+        elif fixed_lines:
+            break
+
+    return "\n".join(fixed_lines)
+
+
 if COOKIES_CONTENT:
     if not _is_netscape_cookies(COOKIES_CONTENT):
-        COOKIES_ERROR = (
-            "El contenido de YTDLP_COOKIES no parece ser un archivo cookies.txt "
-            "en formato Netscape."
-        )
+        fixed = _fix_netscape_cookies(COOKIES_CONTENT)
+        if fixed != COOKIES_CONTENT and _is_netscape_cookies(fixed):
+            COOKIES_CONTENT = fixed
+            import tempfile as _tempfile
+            _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+            _cf.write(COOKIES_CONTENT)
+            _cf.close()
+            COOKIES_PATH = str(_cf.name)
+            COOKIES_VALID = True
+            COOKIES_ERROR = "Cookies reparadas automáticamente (formato ajustado)."
+        else:
+            COOKIES_ERROR = (
+                "El contenido de YTDLP_COOKIES no tiene formato Netscape válido. "
+                "Posibles causas: espacios en lugar de tabuladores, o texto extra "
+                "después de las cookies. Exporta nuevamente con 'Get cookies.txt LOCALLY'."
+            )
     else:
         import tempfile as _tempfile
         _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
@@ -58,9 +93,17 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
         with open(COOKIES_FILE, "r", encoding="utf-8") as f:
             file_content = f.read()
         if not _is_netscape_cookies(file_content):
-            COOKIES_ERROR = (
-                f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
-            )
+            fixed = _fix_netscape_cookies(file_content)
+            if fixed != file_content and _is_netscape_cookies(fixed):
+                with open(COOKIES_FILE, "w", encoding="utf-8") as f:
+                    f.write(fixed)
+                COOKIES_PATH = str(COOKIES_FILE)
+                COOKIES_VALID = True
+                COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
+            else:
+                COOKIES_ERROR = (
+                    f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
+                )
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
