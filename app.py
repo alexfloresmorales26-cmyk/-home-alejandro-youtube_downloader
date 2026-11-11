@@ -178,15 +178,29 @@ def process_download_request(
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-    finally:
+    except Exception:
         import shutil
 
         shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
 
     files = glob.glob(os.path.join(temp_dir, "*"))
     if not files:
+        import shutil
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
         raise Exception("No se pudo generar el archivo de descarga.")
-    return files[0]
+
+    filepath = files[0]
+    # Leer el contenido antes de borrar la carpeta temporal
+    with open(filepath, "rb") as f:
+        content = f.read()
+    filename = os.path.basename(filepath)
+
+    import shutil
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    return content, filename
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +223,18 @@ try:
         status = 200 if res.get("success") else 400
         return jsonify(res), status
 
+    @app.route("/api/cookies-status", methods=["GET"])
+    def api_cookies_status():
+        """Endpoint de diagnóstico: verifica si las cookies de YouTube están configuradas."""
+        return jsonify({
+            "cookies_configured": COOKIES_PATH is not None,
+            "cookies_source": "YTDLP_COOKIES" if COOKIES_CONTENT else (
+                "YTDLP_COOKIES_FILE" if COOKIES_FILE else "none"
+            ),
+            "cookies_path": COOKIES_PATH,
+            "ffmpeg_available": has_ffmpeg(),
+        })
+
     @app.route("/api/download", methods=["GET", "POST"])
     def api_download():
         if request.method == "POST":
@@ -222,9 +248,12 @@ try:
             quality = request.args.get("quality", "best")
 
         try:
-            filepath = process_download_request(url, download_type, quality)
+            content, filename = process_download_request(url, download_type, quality)
             return send_file(
-                filepath, as_attachment=True, download_name=os.path.basename(filepath)
+                content,
+                as_attachment=True,
+                download_name=filename,
+                mimetype="application/octet-stream",
             )
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -284,10 +313,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             quality = query.get("quality", ["best"])[0]
 
             try:
-                filepath = process_download_request(url, download_type, quality)
-                filename = os.path.basename(filepath)
-                with open(filepath, "rb") as f:
-                    content = f.read()
+                content, filename = process_download_request(url, download_type, quality)
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
