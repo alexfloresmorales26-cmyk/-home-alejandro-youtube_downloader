@@ -27,15 +27,15 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 # ---------------------------------------------------------------------------
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
-COOKIES_PATH = None
+COOKIES_PATH: str | None = None
 
 if COOKIES_CONTENT:
     _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
     _cf.write(COOKIES_CONTENT)
     _cf.close()
-    COOKIES_PATH = _cf.name
+    COOKIES_PATH = str(_cf.name)
 elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
-    COOKIES_PATH = COOKIES_FILE
+    COOKIES_PATH = str(COOKIES_FILE)
 
 
 def _ydl_opts_with_cookies(extra: dict) -> dict:
