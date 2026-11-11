@@ -253,7 +253,7 @@ def process_info_request(url: str) -> dict:
             "is_playlist": True,
             "title": info.get("title", "Lista de Reproducción"),
             "uploader": info.get("uploader", "Varios"),
-            "total_items": len(info.get("entries", [])),
+            "total_items": len(list(info.get("entries", []))),
             "thumbnail": info.get("thumbnails", [{}])[-1].get("url", ""),
         }
 
