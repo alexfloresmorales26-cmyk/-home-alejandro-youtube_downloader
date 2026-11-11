@@ -15,7 +15,6 @@ from typing import Optional, Dict, Any, List
 import yt_dlp
 
 
-
 # Lectura de cookies para YouTube (evita bloqueo de bot)
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
@@ -48,6 +47,7 @@ if COOKIES_CONTENT:
         )
     else:
         import tempfile as _tempfile
+
         _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
         _cf.write(COOKIES_CONTENT)
         _cf.close()
@@ -58,9 +58,7 @@ elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
         with open(COOKIES_FILE, "r", encoding="utf-8") as f:
             file_content = f.read()
         if not _is_netscape_cookies(file_content):
-            COOKIES_ERROR = (
-                f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
-            )
+            COOKIES_ERROR = f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
@@ -73,6 +71,7 @@ def _ydl_opts_with_cookies(extra: dict) -> dict:
     if COOKIES_PATH:
         extra["cookiefile"] = COOKIES_PATH
     return extra
+
 
 # Códigos de colores ANSI para la consola
 class Colors:
@@ -194,12 +193,14 @@ class YouTubeDownloader:
 
     def get_info(self, url: str) -> Dict[str, Any]:
         """Obtiene metadatos del video o lista sin descargarlo."""
-        ydl_opts = _ydl_opts_with_cookies({
-            "quiet": True,
-            "no_warnings": True,
-            "extract_flat": "in_playlist",
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "quiet": True,
+                "no_warnings": True,
+                "extract_flat": "in_playlist",
+                "remote_components": ["ejs:github"],
+            }
+        )
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             return ydl.extract_info(url, download=False)
 
@@ -227,15 +228,17 @@ class YouTubeDownloader:
         height = resolution.replace("p", "") if resolution else None
         format_str = _build_video_format(height=height, ffmpeg=self.has_ffmpeg)
 
-        ydl_opts = _ydl_opts_with_cookies({
-            "format": format_str,
-            "outtmpl": outtmpl,
-            "merge_output_format": "mp4" if self.has_ffmpeg else None,
-            "progress_hooks": [self._progress_hook],
-            "no_warnings": True,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "format": format_str,
+                "outtmpl": outtmpl,
+                "merge_output_format": "mp4" if self.has_ffmpeg else None,
+                "progress_hooks": [self._progress_hook],
+                "no_warnings": True,
+                "quiet": True,
+                "remote_components": ["ejs:github"],
+            }
+        )
 
         if download_subtitles:
             ydl_opts.update(
@@ -261,30 +264,34 @@ class YouTubeDownloader:
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
 
         if self.has_ffmpeg:
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": "bestaudio/best",
-                "outtmpl": outtmpl,
-                "postprocessors": [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": audio_format,
-                        "preferredquality": quality,
-                    }
-                ],
-                "progress_hooks": [self._progress_hook],
-                "no_warnings": True,
-                "quiet": True,
-                "remote_components": ["ejs:github"],
-            })
+            ydl_opts = _ydl_opts_with_cookies(
+                {
+                    "format": "bestaudio/best",
+                    "outtmpl": outtmpl,
+                    "postprocessors": [
+                        {
+                            "key": "FFmpegExtractAudio",
+                            "preferredcodec": audio_format,
+                            "preferredquality": quality,
+                        }
+                    ],
+                    "progress_hooks": [self._progress_hook],
+                    "no_warnings": True,
+                    "quiet": True,
+                    "remote_components": ["ejs:github"],
+                }
+            )
         else:
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": "bestaudio/best",
-                "outtmpl": outtmpl,
-                "progress_hooks": [self._progress_hook],
-                "no_warnings": True,
-                "quiet": True,
-                "remote_components": ["ejs:github"],
-            })
+            ydl_opts = _ydl_opts_with_cookies(
+                {
+                    "format": "bestaudio/best",
+                    "outtmpl": outtmpl,
+                    "progress_hooks": [self._progress_hook],
+                    "no_warnings": True,
+                    "quiet": True,
+                    "remote_components": ["ejs:github"],
+                }
+            )
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -319,18 +326,20 @@ class YouTubeDownloader:
             height = resolution.replace("p", "") if resolution else None
             format_str = _build_video_format(height=height, ffmpeg=self.has_ffmpeg)
 
-        ydl_opts = _ydl_opts_with_cookies({
-            "format": format_str,
-            "outtmpl": outtmpl,
-            "merge_output_format": "mp4"
-            if (not audio_only and self.has_ffmpeg)
-            else None,
-            "postprocessors": postprocessors,
-            "progress_hooks": [self._progress_hook],
-            "no_warnings": True,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "format": format_str,
+                "outtmpl": outtmpl,
+                "merge_output_format": "mp4"
+                if (not audio_only and self.has_ffmpeg)
+                else None,
+                "postprocessors": postprocessors,
+                "progress_hooks": [self._progress_hook],
+                "no_warnings": True,
+                "quiet": True,
+                "remote_components": ["ejs:github"],
+            }
+        )
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -343,14 +352,16 @@ class YouTubeDownloader:
     def download_thumbnail(self, url: str) -> bool:
         """Descarga la miniatura del video en máxima resolución."""
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
-        ydl_opts = _ydl_opts_with_cookies({
-            "writethumbnail": True,
-            "skip_download": True,
-            "outtmpl": outtmpl,
-            "no_warnings": True,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "writethumbnail": True,
+                "skip_download": True,
+                "outtmpl": outtmpl,
+                "no_warnings": True,
+                "quiet": True,
+                "remote_components": ["ejs:github"],
+            }
+        )
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
@@ -362,16 +373,18 @@ class YouTubeDownloader:
     def download_subtitles(self, url: str, lang: str = "es") -> bool:
         """Descarga los subtítulos del video."""
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
-        ydl_opts = _ydl_opts_with_cookies({
-            "writesubtitles": True,
-            "writeautomaticsub": True,
-            "subtitleslangs": [lang],
-            "skip_download": True,
-            "outtmpl": outtmpl,
-            "no_warnings": True,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
+        ydl_opts = _ydl_opts_with_cookies(
+            {
+                "writesubtitles": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": [lang],
+                "skip_download": True,
+                "outtmpl": outtmpl,
+                "no_warnings": True,
+                "quiet": True,
+                "remote_components": ["ejs:github"],
+            }
+        )
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
