@@ -19,7 +19,7 @@ import yt_dlp
 # Lectura de cookies para YouTube (evita bloqueo de bot)
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
 COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
-COOKIES_PATH = None
+COOKIES_PATH: str | None = None
 if COOKIES_CONTENT:
     import tempfile as _tempfile
     _cf = _tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
