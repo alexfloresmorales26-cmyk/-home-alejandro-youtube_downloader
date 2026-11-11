@@ -156,12 +156,12 @@ class YouTubeDownloader:
 
     def get_info(self, url: str) -> Dict[str, Any]:
         """Obtiene metadatos del video o lista sin descargarlo."""
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "quiet": True,
             "no_warnings": True,
             "extract_flat": "in_playlist",
             "remote_components": ["ejs:github"],
-        }
+        })
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             return ydl.extract_info(url, download=False)
 
@@ -189,7 +189,7 @@ class YouTubeDownloader:
         height = resolution.replace("p", "") if resolution else None
         format_str = _build_video_format(height=height, ffmpeg=self.has_ffmpeg)
 
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "format": format_str,
             "outtmpl": outtmpl,
             "merge_output_format": "mp4" if self.has_ffmpeg else None,
@@ -197,7 +197,7 @@ class YouTubeDownloader:
             "no_warnings": True,
             "quiet": True,
             "remote_components": ["ejs:github"],
-        }
+        })
 
         if download_subtitles:
             ydl_opts.update(
@@ -223,7 +223,7 @@ class YouTubeDownloader:
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
 
         if self.has_ffmpeg:
-            ydl_opts = {
+            ydl_opts = _ydl_opts_with_cookies({
                 "format": "bestaudio/best",
                 "outtmpl": outtmpl,
                 "postprocessors": [
@@ -237,16 +237,16 @@ class YouTubeDownloader:
                 "no_warnings": True,
                 "quiet": True,
                 "remote_components": ["ejs:github"],
-            }
+            })
         else:
-            ydl_opts = {
+            ydl_opts = _ydl_opts_with_cookies({
                 "format": "bestaudio/best",
                 "outtmpl": outtmpl,
                 "progress_hooks": [self._progress_hook],
                 "no_warnings": True,
                 "quiet": True,
                 "remote_components": ["ejs:github"],
-            }
+            })
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -281,7 +281,7 @@ class YouTubeDownloader:
             height = resolution.replace("p", "") if resolution else None
             format_str = _build_video_format(height=height, ffmpeg=self.has_ffmpeg)
 
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "format": format_str,
             "outtmpl": outtmpl,
             "merge_output_format": "mp4"
@@ -292,7 +292,7 @@ class YouTubeDownloader:
             "no_warnings": True,
             "quiet": True,
             "remote_components": ["ejs:github"],
-        }
+        })
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -305,14 +305,14 @@ class YouTubeDownloader:
     def download_thumbnail(self, url: str) -> bool:
         """Descarga la miniatura del video en máxima resolución."""
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "writethumbnail": True,
             "skip_download": True,
             "outtmpl": outtmpl,
             "no_warnings": True,
             "quiet": True,
             "remote_components": ["ejs:github"],
-        }
+        })
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
@@ -324,7 +324,7 @@ class YouTubeDownloader:
     def download_subtitles(self, url: str, lang: str = "es") -> bool:
         """Descarga los subtítulos del video."""
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
-        ydl_opts = {
+        ydl_opts = _ydl_opts_with_cookies({
             "writesubtitles": True,
             "writeautomaticsub": True,
             "subtitleslangs": [lang],
@@ -333,7 +333,7 @@ class YouTubeDownloader:
             "no_warnings": True,
             "quiet": True,
             "remote_components": ["ejs:github"],
-        }
+        })
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])

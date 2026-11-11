@@ -108,6 +108,19 @@ def api_info():
     })
 
 
+@app.route("/api/cookies-status", methods=["GET"])
+def api_cookies_status():
+    """Endpoint de diagnóstico: verifica si las cookies de YouTube están configuradas."""
+    return jsonify({
+        "cookies_configured": COOKIES_PATH is not None,
+        "cookies_source": "YTDLP_COOKIES" if COOKIES_CONTENT else (
+            "YTDLP_COOKIES_FILE" if COOKIES_FILE else "none"
+        ),
+        "cookies_path": COOKIES_PATH,
+        "ffmpeg_available": has_ffmpeg(),
+    })
+
+
 @app.route("/api/download", methods=["GET", "POST"])
 def api_download():
     if request.method == "POST":
@@ -204,10 +217,16 @@ def api_download():
         filepath = files[0]
         filename = os_module.path.basename(filepath)
 
+        with open(filepath, "rb") as f:
+            content = f.read()
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
         return send_file(
-            filepath,
+            content,
             as_attachment=True,
             download_name=filename,
+            mimetype="application/octet-stream",
         )
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
