@@ -16,6 +16,33 @@ import re
 import yt_dlp
 from downloader import format_duration, has_ffmpeg
 
+# ---------------------------------------------------------------------------
+# Validación de URLs de YouTube
+# ---------------------------------------------------------------------------
+YOUTUBE_URL_REGEX = re.compile(
+    r"^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)[a-zA-Z0-9_-]+([&?].*)?$"
+)
+
+
+def validate_youtube_url(url: str) -> tuple[bool, str]:
+    """Valida que la URL sea de YouTube y tenga formato correcto.
+
+    Retorna (es_valido, mensaje_error).
+    """
+    if not url or not url.strip():
+        return False, "Debes ingresar una URL de YouTube."
+
+    url = url.strip()
+
+    if not YOUTUBE_URL_REGEX.match(url):
+        return False,
+        "La URL no parece ser de YouTube. Ejemplos válidos:\n"
+        "  • https://www.youtube.com/watch?v=VIDEO_ID\n"
+        "  • https://youtu.be/VIDEO_ID\n"
+        "  • https://www.youtube.com/playlist?list=PLAYLIST_ID"
+
+    return True, ""
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
@@ -140,8 +167,9 @@ def _ydl_opts_with_cookies(extra: dict) -> dict:
 # ---------------------------------------------------------------------------
 def process_info_request(url: str) -> dict:
     """Extrae metadatos y resoluciones del video usando yt-dlp."""
-    if not url:
-        return {"success": False, "error": "Debes ingresar una URL válida de YouTube."}
+    es_valido, mensaje = validate_youtube_url(url)
+    if not es_valido:
+        return {"success": False, "error": mensaje}
 
     ydl_opts = _ydl_opts_with_cookies({
         "quiet": True,
@@ -195,6 +223,10 @@ def process_download_request(
     url: str, download_type: str = "video", quality: str = "best"
 ) -> str:
     """Descarga el archivo en una carpeta temporal y retorna su ruta."""
+    es_valido, mensaje = validate_youtube_url(url)
+    if not es_valido:
+        raise ValueError(mensaje)
+
     temp_dir = tempfile.mkdtemp()
     outtmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
     ffmpeg_available = has_ffmpeg()

@@ -127,6 +127,35 @@ elif COOKIES_FROM_BROWSER:
     COOKIES_SOURCE = f"YTDLP_COOKIES_FROM_BROWSER ({COOKIES_FROM_BROWSER})"
 
 
+# ---------------------------------------------------------------------------
+# Validación de URLs de YouTube
+# ---------------------------------------------------------------------------
+YOUTUBE_URL_REGEX = re.compile(
+    r"^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)[a-zA-Z0-9_-]+([&?].*)?$"
+)
+
+
+def validate_youtube_url(url: str) -> tuple[bool, str]:
+    """Valida que la URL sea de YouTube y tenga formato correcto.
+
+    Retorna (es_valido, mensaje_error).
+    """
+    if not url or not url.strip():
+        return False, "Debes ingresar una URL de YouTube."
+
+    url = url.strip()
+
+    if not YOUTUBE_URL_REGEX.match(url):
+        return False, (
+            "La URL no parece ser de YouTube. Ejemplos válidos:\n"
+            "  • https://www.youtube.com/watch?v=VIDEO_ID\n"
+            "  • https://youtu.be/VIDEO_ID\n"
+            "  • https://www.youtube.com/playlist?list=PLAYLIST_ID"
+        )
+
+    return True, ""
+
+
 def _ydl_opts_with_cookies(extra: dict) -> dict:
     """Agrega cookies a las opciones de yt-dlp si están disponibles."""
     if COOKIES_PATH:
@@ -150,8 +179,9 @@ def api_info():
     data = request.get_json(silent=True) or {}
     url = data.get("url", "").strip()
 
-    if not url:
-        return jsonify({"success": False, "error": "Debes ingresar una URL válida de YouTube."}), 400
+    es_valido, mensaje = validate_youtube_url(url)
+    if not es_valido:
+        return jsonify({"success": False, "error": mensaje}), 400
 
     ydl_opts = _ydl_opts_with_cookies({
         "quiet": True,
@@ -243,8 +273,9 @@ def api_download():
         download_type = request.args.get("type", "video")
         quality = request.args.get("quality", "best")
 
-    if not url:
-        return jsonify({"success": False, "error": "URL requerida"}), 400
+    es_valido, mensaje = validate_youtube_url(url)
+    if not es_valido:
+        return jsonify({"success": False, "error": mensaje}), 400
 
     temp_dir = tempfile.mkdtemp()
     outtmpl = os_module.path.join(temp_dir, "%(title)s.%(ext)s")
