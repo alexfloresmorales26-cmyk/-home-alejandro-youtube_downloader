@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . .
 
 # Puerto para Render
-EXPOSE $PORT
+EXPOSE 8080
 
 # Comando de inicio para Render (modo Flask con gunicorn)
 CMD exec gunicorn -b 0.0.0.0:$PORT app:app
