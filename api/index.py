@@ -27,9 +27,11 @@ import os as os_module
 import yt_dlp
 from downloader import YouTubeDownloader, format_duration, format_bytes, has_ffmpeg
 
-app = Flask(__name__,
+app = Flask(
+    __name__,
     template_folder=os_module.path.join(PROJECT_ROOT, "templates"),
-    static_folder=os_module.path.join(PROJECT_ROOT, "static"))
+    static_folder=os_module.path.join(PROJECT_ROOT, "static"),
+)
 
 BASE_DIR = PROJECT_ROOT
 TEMPLATES_DIR = os_module.path.join(BASE_DIR, "templates")
@@ -124,9 +126,7 @@ elif COOKIES_FILE and os_module.path.exists(COOKIES_FILE):
                 COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE}, reparado)"
                 COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
             else:
-                COOKIES_ERROR = (
-                    f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
-                )
+                COOKIES_ERROR = f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
         else:
             COOKIES_PATH = str(COOKIES_FILE)
             COOKIES_VALID = True
@@ -175,7 +175,9 @@ def cleanup_temp_dirs(max_age_hours: int = 2) -> dict:
                     for root, _dirs, files in os_module.walk(entry_path):
                         for f in files:
                             try:
-                                size += os_module.path.getsize(os_module.path.join(root, f))
+                                size += os_module.path.getsize(
+                                    os_module.path.join(root, f)
+                                )
                             except OSError:
                                 pass
 
@@ -240,6 +242,7 @@ def _ydl_opts_with_cookies(extra: dict) -> dict:
 # Rutas de la API
 # ---------------------------------------------------------------------------
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -254,12 +257,14 @@ def api_info():
     if not es_valido:
         return jsonify({"success": False, "error": mensaje}), 400
 
-    ydl_opts = _ydl_opts_with_cookies({
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": "in_playlist",
-        "remote_components": ["ejs:github"],
-    })
+    ydl_opts = _ydl_opts_with_cookies(
+        {
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": "in_playlist",
+            "remote_components": ["ejs:github"],
+        }
+    )
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -269,14 +274,16 @@ def api_info():
 
     is_playlist = "entries" in info
     if is_playlist:
-        return jsonify({
-            "success": True,
-            "is_playlist": True,
-            "title": info.get("title", "Lista de Reproducción"),
-            "uploader": info.get("uploader", "Varios"),
-            "total_items": len(list(info.get("entries", []))),
-            "thumbnail": info.get("thumbnails", [{}])[-1].get("url", ""),
-        })
+        return jsonify(
+            {
+                "success": True,
+                "is_playlist": True,
+                "title": info.get("title", "Lista de Reproducción"),
+                "uploader": info.get("uploader", "Varios"),
+                "total_items": len(list(info.get("entries", []))),
+                "thumbnail": info.get("thumbnails", [{}])[-1].get("url", ""),
+            }
+        )
 
     formats = info.get("formats", [])
     heights = set()
@@ -285,18 +292,26 @@ def api_info():
             heights.add(f["height"])
 
     sorted_heights = sorted(list(heights), reverse=True)
-    resolutions = [f"{h}p" for h in sorted_heights] if sorted_heights else ["1080p", "720p", "480p", "360p"]
+    resolutions = (
+        [f"{h}p" for h in sorted_heights]
+        if sorted_heights
+        else ["1080p", "720p", "480p", "360p"]
+    )
 
-    return jsonify({
-        "success": True,
-        "is_playlist": False,
-        "title": info.get("title", "Sin título"),
-        "uploader": info.get("uploader", "Desconocido"),
-        "duration": format_duration(info.get("duration")),
-        "view_count": f"{info.get('view_count', 0):,}" if info.get("view_count") else "N/A",
-        "thumbnail": info.get("thumbnail", ""),
-        "resolutions": resolutions,
-    })
+    return jsonify(
+        {
+            "success": True,
+            "is_playlist": False,
+            "title": info.get("title", "Sin título"),
+            "uploader": info.get("uploader", "Desconocido"),
+            "duration": format_duration(info.get("duration")),
+            "view_count": f"{info.get('view_count', 0):,}"
+            if info.get("view_count")
+            else "N/A",
+            "thumbnail": info.get("thumbnail", ""),
+            "resolutions": resolutions,
+        }
+    )
 
 
 @app.route("/api/cookies-status", methods=["GET"])
@@ -317,19 +332,22 @@ def api_cookies_status():
         except Exception:
             cookiefile_readable = False
 
-    return jsonify({
-        "cookies_configured": COOKIES_PATH is not None or bool(COOKIES_FROM_BROWSER),
-        "cookies_valid": COOKIES_VALID,
-        "cookies_source": COOKIES_SOURCE,
-        "cookies_path": COOKIES_PATH,
-        "cookies_from_browser": COOKIES_FROM_BROWSER,
-        "cookiefile_exists": cookiefile_exists,
-        "cookiefile_readable": cookiefile_readable,
-        "cookiefile_size": cookiefile_size,
-        "cookies_error": COOKIES_ERROR,
-        "ffmpeg_available": has_ffmpeg(),
-        "yt_dlp_installed": True,
-    })
+    return jsonify(
+        {
+            "cookies_configured": COOKIES_PATH is not None
+            or bool(COOKIES_FROM_BROWSER),
+            "cookies_valid": COOKIES_VALID,
+            "cookies_source": COOKIES_SOURCE,
+            "cookies_path": COOKIES_PATH,
+            "cookies_from_browser": COOKIES_FROM_BROWSER,
+            "cookiefile_exists": cookiefile_exists,
+            "cookiefile_readable": cookiefile_readable,
+            "cookiefile_size": cookiefile_size,
+            "cookies_error": COOKIES_ERROR,
+            "ffmpeg_available": has_ffmpeg(),
+            "yt_dlp_installed": True,
+        }
+    )
 
 
 @app.route("/api/cleanup", methods=["POST"])
@@ -361,37 +379,47 @@ def api_download():
 
     try:
         if download_type == "thumbnail":
-            ydl_opts = _ydl_opts_with_cookies({
-                "writethumbnail": True,
-                "skip_download": True,
-                "outtmpl": outtmpl,
-                "quiet": True,
-                "no_warnings": True,
-                "remote_components": ["ejs:github"],
-            })
+            ydl_opts = _ydl_opts_with_cookies(
+                {
+                    "writethumbnail": True,
+                    "skip_download": True,
+                    "outtmpl": outtmpl,
+                    "quiet": True,
+                    "no_warnings": True,
+                    "remote_components": ["ejs:github"],
+                }
+            )
         elif download_type == "audio":
-            audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
+            audio_format = (
+                quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
+            )
             if ffmpeg_available:
-                ydl_opts = _ydl_opts_with_cookies({
-                    "format": "bestaudio/best",
-                    "outtmpl": outtmpl,
-                    "postprocessors": [{
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": audio_format,
-                        "preferredquality": "192",
-                    }],
-                    "quiet": True,
-                    "no_warnings": True,
-                    "remote_components": ["ejs:github"],
-                })
+                ydl_opts = _ydl_opts_with_cookies(
+                    {
+                        "format": "bestaudio/best",
+                        "outtmpl": outtmpl,
+                        "postprocessors": [
+                            {
+                                "key": "FFmpegExtractAudio",
+                                "preferredcodec": audio_format,
+                                "preferredquality": "192",
+                            }
+                        ],
+                        "quiet": True,
+                        "no_warnings": True,
+                        "remote_components": ["ejs:github"],
+                    }
+                )
             else:
-                ydl_opts = _ydl_opts_with_cookies({
-                    "format": "bestaudio/best",
-                    "outtmpl": outtmpl,
-                    "quiet": True,
-                    "no_warnings": True,
-                    "remote_components": ["ejs:github"],
-                })
+                ydl_opts = _ydl_opts_with_cookies(
+                    {
+                        "format": "bestaudio/best",
+                        "outtmpl": outtmpl,
+                        "quiet": True,
+                        "no_warnings": True,
+                        "remote_components": ["ejs:github"],
+                    }
+                )
         else:  # video
             if quality and quality != "best":
                 height = quality.replace("p", "")
@@ -413,25 +441,37 @@ def api_download():
                     )
             else:
                 if ffmpeg_available:
-                    format_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+                    format_str = (
+                        "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+                    )
                 else:
                     format_str = "best[ext=mp4]/best"
 
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": format_str,
-                "outtmpl": outtmpl,
-                "merge_output_format": "mp4" if ffmpeg_available else None,
-                "quiet": True,
-                "no_warnings": True,
-                "remote_components": ["ejs:github"],
-            })
+            ydl_opts = _ydl_opts_with_cookies(
+                {
+                    "format": format_str,
+                    "outtmpl": outtmpl,
+                    "merge_output_format": "mp4" if ffmpeg_available else None,
+                    "quiet": True,
+                    "no_warnings": True,
+                    "remote_components": ["ejs:github"],
+                }
+            )
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
         files = glob.glob(os_module.path.join(temp_dir, "*"))
         if not files:
-            return jsonify({"success": False, "error": "No se pudo generar el archivo de descarga."}), 500
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "No se pudo generar el archivo de descarga.",
+                    }
+                ),
+                500,
+            )
 
         filepath = files[0]
         filename = os_module.path.basename(filepath)
