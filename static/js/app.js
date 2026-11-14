@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Iniciar Descarga
-    startDownloadBtn.addEventListener("click", () => {
+    startDownloadBtn.addEventListener("click", async () => {
         if (!currentUrl) return;
 
         startDownloadBtn.disabled = true;
@@ -172,16 +172,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const originalText = downloadBtnText.textContent;
         downloadBtnText.textContent = "Preparando descarga...";
 
-        // Formar URL de descarga directa
-        const downloadUrl = `/api/download?url=${encodeURIComponent(currentUrl)}&type=${currentType}&quality=${currentQuality}`;
+        try {
+            // Formar URL de descarga directa
+            const downloadUrl = `/api/download?url=${encodeURIComponent(currentUrl)}&type=${currentType}&quality=${currentQuality}`;
 
-        // Crear enlace invisible para descargar en el navegador del usuario
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.setAttribute("download", "");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            // Verificar que el servidor pueda procesar la descarga antes de forzar la descarga del navegador
+            const response = await fetch(downloadUrl, { method: "HEAD" });
+
+            if (!response.ok) {
+                // El servidor retornó un error (JSON), mostrarlo al usuario
+                const errorData = await fetch(downloadUrl).then(r => r.json()).catch(() => null);
+                showError(errorData?.error || "Error del servidor al preparar la descarga.");
+                startDownloadBtn.disabled = false;
+                downloadProgressBar.classList.add("hidden");
+                downloadBtnText.textContent = originalText;
+                return;
+            }
+
+            // Crear enlace invisible para descargar en el navegador del usuario
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.setAttribute("download", "");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            showError("Error de conexión al intentar descargar: " + err.message);
+            startDownloadBtn.disabled = false;
+            downloadProgressBar.classList.add("hidden");
+            downloadBtnText.textContent = originalText;
+        }
 
         // Restaurar estado después de unos segundos
         setTimeout(() => {
