@@ -129,12 +129,6 @@ def _ydl_opts_with_cookies(extra: dict) -> dict:
     return extra
 
 
-def _ydl_opts_with_cookies(extra: dict) -> dict:
-    """Agrega cookies a las opciones de yt-dlp si están disponibles."""
-    if COOKIES_PATH:
-        extra["cookiefile"] = COOKIES_PATH
-    return extra
-
 # Códigos de colores ANSI para la consola
 class Colors:
     HEADER = "\033[95m"
