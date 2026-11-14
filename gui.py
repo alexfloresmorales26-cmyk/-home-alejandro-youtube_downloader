@@ -7,6 +7,8 @@ DESCRIPCION: Lanzador de la Aplicación de Escritorio Nativa (Desktop GUI).
 =============================================================================
 """
 
+__version__ = "1.0.0"
+
 import time
 import socket
 import threading

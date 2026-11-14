@@ -1,3 +1,12 @@
+"""
+=============================================================================
+MODULO: api/index.py
+DESCRIPCION: Punto de entrada serverless para Vercel.
+=============================================================================
+"""
+
+__version__ = "1.0.0"
+
 import sys
 import io
 import os
