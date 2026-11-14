@@ -1,4 +1,4 @@
-# 🎬 Descargador de YouTube Profesional (Desktop GUI, Web & CLI)
+# 🎬 Descargador de YouTube Profesional (Desktop GUI, Web & CLI) v1.0.0
 
 Aplicación todo-en-uno en Python para descargar videos, audios en MP3/M4A/WAV, miniaturas y listas de reproducción de YouTube en alta definición.
 
@@ -69,10 +69,13 @@ O alternativamente, sube el archivo `cookies.txt` y usa:
 
 ### En ejecución local:
 
-Crea un archivo `.env` en la raíz del proyecto:
+Crea un archivo `.env` en la raíz del proyecto **(archivo local, no se sube al repositorio)**:
 ```
 YTDLP_COOKIES_FILE=./cookies.txt
 ```
+
+El archivo `cookies.txt` también es local y no está versionado (está en `.gitignore` por seguridad). Cada usuario debe crear el suyo propio exportando las cookies de su navegador.
+
 O exporta la variable:
 ```bash
 export YTDLP_COOKIES="$(cat cookies.txt)"
@@ -95,6 +98,8 @@ youtube_downloader/
 │   ├── css/styles.css    # 🖌️ Estilos visuales
 │   └── js/app.js         # ⚡ Lógica interactiva en JavaScript
 ├── test_downloader.py    # 🧪 Pruebas unitarias
+├── VERSION               # 📌 Versión actual del proyecto (1.0.0)
+├── .env                  # 🔐 Variables de entorno local (no se sube al repositorio)
 ├── requirements.txt      # 📦 Dependencias (flask, yt-dlp, gunicorn, pywebview)
 ├── requirements-dev.txt  # 🛠️ Dependencias de desarrollo
 ├── Dockerfile            # 🐳 Docker para despliegue
@@ -102,6 +107,21 @@ youtube_downloader/
 ├── vercel.json           # ☁️ Configuración para Vercel
 ├── Procfile              # 📦 Procfile para Render/Heroku
 ├── runtime.txt           # 🐍 Versión de Python
+├── .flake8               # 🔧 Configuración de flake8
+├── .pre-commit-config.yaml  # 🔧 Configuración de pre-commit
+├── .gitignore            # 🚫 Archivos y carpetas ignorados por git
+├── CHANGES_APPLIED_BY_ASSISTANT.md  # 📝 Registro de cambios aplicados
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   ├── autoformat.yml
+│   │   ├── ci-automerge.yml
+│   │   ├── create-pr.yml
+│   │   └── notify-on-merge.yml
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml
+│   │   └── feature_request.yml
+│   └── pull_request_template.md
 └── downloads/            # 📂 Carpeta donde se guardan las descargas
 ```
 
@@ -149,7 +169,7 @@ Render despliega usando el `Dockerfile` que incluye **ffmpeg**, permitiendo desc
 
 4. Ejecutar tests unitarios:
    ```bash
-   python -m unittest -v
+   python -m unittest test_downloader.py -v
    ```
 
 5. Ejecutar la aplicación en modo consola (CLI):
