@@ -8,6 +8,7 @@ DESCRIPCION: Servidor Web para el Descargador de YouTube.
 """
 
 import os
+import io
 import json
 import glob
 import tempfile
@@ -461,7 +462,7 @@ try:
         try:
             content, filename = process_download_request(url, download_type, quality)
             return send_file(
-                content,
+                io.BytesIO(content),
                 as_attachment=True,
                 download_name=filename,
                 mimetype="application/octet-stream",

@@ -1,4 +1,5 @@
 import sys
+import io
 import os
 import re
 import time
@@ -429,10 +430,8 @@ def api_download():
         with open(filepath, "rb") as f:
             content = f.read()
 
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
         return send_file(
-            content,
+            io.BytesIO(content),
             as_attachment=True,
             download_name=filename,
             mimetype="application/octet-stream",
