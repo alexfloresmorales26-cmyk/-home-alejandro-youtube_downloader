@@ -7,6 +7,8 @@ DESCRIPCION: Servidor Web para el Descargador de YouTube.
 =============================================================================
 """
 
+__version__ = "1.0.0"
+
 import os
 import io
 import json

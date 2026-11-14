@@ -6,6 +6,8 @@ DESCRIPCION: Interfaz de usuario interactiva y completa por consola.
 =============================================================================
 """
 
+__version__ = "1.0.0"
+
 import os
 import argparse
 from downloader import YouTubeDownloader, format_duration, Colors
