@@ -15,6 +15,7 @@ import time
 import unittest
 from unittest import mock
 
+import core
 import cookies
 from core import (
     _normalize_download_options,
@@ -84,6 +85,9 @@ class TestUrlValidation(unittest.TestCase):
 
 
 class TestDownloadOptions(unittest.TestCase):
+    def setUp(self):
+        core.clear_info_cache()
+
     def test_invalid_type_falls_back_to_video(self):
         self.assertEqual(
             _normalize_download_options("../etc", "best"), ("video", "best")
@@ -147,6 +151,121 @@ class TestDownloadOptions(unittest.TestCase):
         self.assertNotIn("abc", _build_video_format("abc", ffmpeg=True))
         self.assertNotIn("height=0", _build_video_format("0", ffmpeg=True))
         self.assertIn("height=720", _build_video_format("720", ffmpeg=True))
+
+
+class TestInfoCache(unittest.TestCase):
+    def setUp(self):
+        core.clear_info_cache()
+
+    def tearDown(self):
+        core.clear_info_cache()
+
+    @staticmethod
+    def _fake_info():
+        return {
+            "title": "Video de prueba",
+            "formats": [{"height": 720, "vcodec": "avc1"}],
+            "view_count": 10,
+        }
+
+    def test_info_cache_reuses_result_and_returns_copies(self):
+        with mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls:
+            ydl_cls.return_value.__enter__.return_value.extract_info.return_value = (
+                self._fake_info()
+            )
+            first = process_info_request("https://youtu.be/cachehit")
+            first["title"] = "mutado"
+            second = process_info_request("https://youtu.be/cachehit")
+
+        self.assertEqual(ydl_cls.call_count, 1)
+        self.assertEqual(second["title"], "Video de prueba")
+
+    def test_info_cache_can_be_disabled(self):
+        with mock.patch.object(core, "INFO_CACHE_TTL", 0):
+            with mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls:
+                extract = ydl_cls.return_value.__enter__.return_value.extract_info
+                extract.return_value = self._fake_info()
+                process_info_request("https://youtu.be/cacheoff")
+                process_info_request("https://youtu.be/cacheoff")
+
+        self.assertEqual(ydl_cls.call_count, 2)
+
+    def test_info_cache_evicts_oldest_entry(self):
+        with mock.patch.object(core, "INFO_CACHE_MAX", 2):
+            with mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls:
+                extract = ydl_cls.return_value.__enter__.return_value.extract_info
+                extract.return_value = self._fake_info()
+                for video_id in ("uno", "dos", "tres"):
+                    process_info_request(f"https://youtu.be/{video_id}")
+                process_info_request("https://youtu.be/uno")
+
+        self.assertEqual(ydl_cls.call_count, 4)
+
+    def test_info_cache_expires_after_ttl(self):
+        clock = [0.0]
+        with mock.patch.object(core, "INFO_CACHE_TTL", 10), mock.patch(
+            "core.time.monotonic", side_effect=lambda: clock[0]
+        ), mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls:
+            extract = ydl_cls.return_value.__enter__.return_value.extract_info
+            extract.return_value = self._fake_info()
+            process_info_request("https://youtu.be/cacheexpire")
+            clock[0] = 9.0
+            process_info_request("https://youtu.be/cacheexpire")
+            clock[0] = 11.0
+            process_info_request("https://youtu.be/cacheexpire")
+
+        self.assertEqual(ydl_cls.call_count, 2)
+
+    def test_info_cache_does_not_store_failures(self):
+        with mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls:
+            extract = ydl_cls.return_value.__enter__.return_value.extract_info
+            extract.side_effect = RuntimeError("fallo de red")
+            first = process_info_request("https://youtu.be/cachefail")
+            second = process_info_request("https://youtu.be/cachefail")
+
+        self.assertFalse(first["success"])
+        self.assertFalse(second["success"])
+        self.assertEqual(ydl_cls.call_count, 2)
+
+
+class TestDownloadConcurrency(unittest.TestCase):
+    def test_semaphore_limits_concurrent_downloads(self):
+        first_entered = threading.Event()
+        release_first = threading.Event()
+        second_entered = threading.Event()
+        calls = []
+
+        def fake_download(url, download_type, quality):
+            calls.append(url)
+            if len(calls) == 1:
+                first_entered.set()
+                release_first.wait(timeout=5)
+            else:
+                second_entered.set()
+            return "/tmp/fake", "/tmp/fake", "fake"
+
+        with mock.patch.object(
+            core, "_DOWNLOAD_SEMAPHORE", threading.BoundedSemaphore(1)
+        ), mock.patch.object(core, "_download_to_temp", side_effect=fake_download):
+            first = threading.Thread(
+                target=process_download_request,
+                args=("https://youtu.be/dQw4w9WgXcQ",),
+            )
+            first.start()
+            self.assertTrue(first_entered.wait(timeout=5))
+            second = threading.Thread(
+                target=process_download_request,
+                args=("https://youtu.be/dQw4w9WgXcQ",),
+            )
+            second.start()
+            self.assertFalse(second_entered.wait(timeout=0.2))
+            release_first.set()
+            first.join(timeout=5)
+            second.join(timeout=5)
+
+        self.assertTrue(second_entered.is_set())
+        self.assertFalse(first.is_alive())
+        self.assertFalse(second.is_alive())
 
 
 class TestCookies(unittest.TestCase):
@@ -394,6 +513,12 @@ class TestFlaskApi(unittest.TestCase):
         self.assertIn("cookies_valid", data)
         self.assertIn("ffmpeg_available", data)
 
+    def test_index_uses_local_tailwind(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"/static/css/tailwind.min.css", response.data)
+        self.assertNotIn(b"cdn.tailwindcss.com", response.data)
+
 
 class TestNativeServer(unittest.TestCase):
     @classmethod
@@ -411,17 +536,21 @@ class TestNativeServer(unittest.TestCase):
         cls.server.shutdown()
         cls.server.server_close()
 
-    def _request(self, method, path):
+    def _request_response(self, method, path, headers=None):
         conn = http.client.HTTPConnection(
             "127.0.0.1", self.server.server_port, timeout=5
         )
         try:
-            conn.request(method, path)
+            conn.request(method, path, headers=headers or {})
             response = conn.getresponse()
-            response.read()
-            return response.status
+            body = response.read()
+            return response.status, response.headers, body
         finally:
             conn.close()
+
+    def _request(self, method, path):
+        status, _headers, _body = self._request_response(method, path)
+        return status
 
     def test_native_head_valid_url(self):
         status = self._request(
@@ -440,6 +569,51 @@ class TestNativeServer(unittest.TestCase):
 
     def test_native_cookies_status(self):
         self.assertEqual(self._request("GET", "/api/cookies-status"), 200)
+
+    def test_native_uses_http_11(self):
+        handler = self.server.RequestHandlerClass
+        self.assertEqual(handler.protocol_version, "HTTP/1.1")
+
+    def test_native_static_cache_headers_and_304(self):
+        status, headers, body = self._request_response("GET", "/static/css/styles.css")
+        self.assertEqual(status, 200)
+        self.assertTrue(body)
+        self.assertIn("max-age", headers.get("Cache-Control", ""))
+        last_modified = headers.get("Last-Modified")
+        self.assertTrue(last_modified)
+
+        status, headers, body = self._request_response(
+            "GET",
+            "/static/css/styles.css",
+            {"If-Modified-Since": last_modified},
+        )
+        self.assertEqual(status, 304)
+        self.assertEqual(body, b"")
+
+        status, _headers, _body = self._request_response(
+            "GET",
+            "/static/css/styles.css",
+            {"If-Modified-Since": "fecha invalida"},
+        )
+        self.assertEqual(status, 200)
+
+    def test_native_json_is_not_stored(self):
+        status, headers, _body = self._request_response("GET", "/api/cookies-status")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("Cache-Control"), "no-store")
+
+    def test_native_download_head_is_not_stored(self):
+        status, headers, body = self._request_response(
+            "HEAD", "/api/download?url=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("Cache-Control"), "no-store")
+        self.assertEqual(body, b"")
+
+    def test_native_index_is_revalidated(self):
+        status, headers, _body = self._request_response("GET", "/")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("Cache-Control"), "no-cache")
 
 
 if __name__ == "__main__":

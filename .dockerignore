@@ -22,6 +22,7 @@ __pycache__
 .pre-commit-config.yaml
 .flake8
 requirements-dev.txt
+node_modules
 test_*.py
 
 # Descargas y documentacion

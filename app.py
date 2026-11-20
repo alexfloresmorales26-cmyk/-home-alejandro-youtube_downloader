@@ -14,6 +14,7 @@ import mimetypes
 import os
 import shutil
 import urllib.parse
+from email.utils import parsedate_to_datetime
 
 import cookies as cookie_config
 from core import process_download_request, process_info_request
@@ -132,11 +133,14 @@ def _content_disposition(filename: str) -> str:
 
 
 class StandaloneWebHandler(SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def _send_json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -165,6 +169,45 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             return {}
         return {key: values[0] for key, values in parsed.items() if values}
 
+    def _is_not_modified(self, mtime: float) -> bool:
+        header = self.headers.get("If-Modified-Since")
+        if not header:
+            return False
+        try:
+            since = parsedate_to_datetime(header)
+        except (TypeError, ValueError):
+            return False
+        if since is None or since.tzinfo is None:
+            return False
+        return int(mtime) <= int(since.timestamp())
+
+    def _send_static(self, file_path: str) -> None:
+        try:
+            stat = os.stat(file_path)
+        except OSError as exc:
+            self._send_json(500, {"success": False, "error": str(exc)})
+            return
+
+        last_modified = self.date_time_string(stat.st_mtime)
+        cache_control = "public, max-age=3600"
+        if self._is_not_modified(stat.st_mtime):
+            self.send_response(304)
+            self.send_header("Cache-Control", cache_control)
+            self.send_header("Last-Modified", last_modified)
+            self.end_headers()
+            return
+
+        content_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+        with open(file_path, "rb") as file_obj:
+            content = file_obj.read()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Cache-Control", cache_control)
+        self.send_header("Last-Modified", last_modified)
+        self.end_headers()
+        self.wfile.write(content)
+
     def _handle_download(
         self, url: str, download_type: str = "video", quality: str = "best"
     ) -> None:
@@ -191,6 +234,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Length", str(size))
             self.send_header("Content-Disposition", _content_disposition(filename))
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             with open(filepath, "rb") as file_obj:
                 shutil.copyfileobj(file_obj, self.wfile, length=1024 * 1024)
@@ -214,6 +258,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             self.wfile.write(content)
             return
@@ -237,16 +282,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
                 inside_static = False
 
             if inside_static and os.path.isfile(file_path):
-                content_type = (
-                    mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-                )
-                with open(file_path, "rb") as file_obj:
-                    content = file_obj.read()
-                self.send_response(200)
-                self.send_header("Content-Type", content_type)
-                self.send_header("Content-Length", str(len(content)))
-                self.end_headers()
-                self.wfile.write(content)
+                self._send_static(file_path)
                 return
 
         if path == "/api/download":
@@ -267,12 +303,14 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             es_valido, _mensaje = validate_youtube_url(query.get("url", [""])[0])
             self.send_response(200 if es_valido else 400)
             self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             return
 
         if parsed.path in ("/", "/index.html"):
             self.send_response(200)
             self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             return
 

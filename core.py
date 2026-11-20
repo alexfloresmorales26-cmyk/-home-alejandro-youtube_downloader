@@ -8,11 +8,15 @@ DESCRIPCION: Logica compartida de extraccion de metadatos y descargas.
 =============================================================================
 """
 
+import copy
 import os
 import re
 import shutil
 import tempfile
+import threading
+import time
 import zipfile
+from collections import OrderedDict
 
 import yt_dlp
 
@@ -28,6 +32,57 @@ from utils import (
 DOWNLOAD_TYPES = {"video", "audio", "thumbnail"}
 AUDIO_FORMATS = {"mp3", "m4a", "wav", "flac"}
 VIDEO_QUALITY_RE = re.compile(r"^(\d{3,4})p$")
+
+
+def _env_int(name: str, default: int, minimum: int = 0) -> int:
+    """Lee un entero de entorno sin romper la app si es invalido."""
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, value)
+
+
+# Cache TTL de metadatos: evita repetir extracciones de ~4-5 segundos.
+INFO_CACHE_TTL = _env_int("YTDLP_INFO_CACHE_TTL", 120, 0)
+INFO_CACHE_MAX = _env_int("YTDLP_INFO_CACHE_MAX", 64, 0)
+MAX_CONCURRENT_DOWNLOADS = _env_int("YTDLP_MAX_CONCURRENT_DOWNLOADS", 2, 1)
+
+_INFO_CACHE: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
+_INFO_CACHE_LOCK = threading.Lock()
+_DOWNLOAD_SEMAPHORE = threading.BoundedSemaphore(MAX_CONCURRENT_DOWNLOADS)
+
+
+def clear_info_cache() -> None:
+    """Vacia la cache de metadatos (pruebas y limpieza manual)."""
+    with _INFO_CACHE_LOCK:
+        _INFO_CACHE.clear()
+
+
+def _cache_get(url: str) -> dict | None:
+    if INFO_CACHE_TTL <= 0 or INFO_CACHE_MAX <= 0:
+        return None
+    now = time.monotonic()
+    with _INFO_CACHE_LOCK:
+        cached = _INFO_CACHE.get(url)
+        if cached is None:
+            return None
+        stored_at, payload = cached
+        if now - stored_at >= INFO_CACHE_TTL:
+            _INFO_CACHE.pop(url, None)
+            return None
+        _INFO_CACHE.move_to_end(url)
+        return copy.deepcopy(payload)
+
+
+def _cache_put(url: str, payload: dict) -> None:
+    if INFO_CACHE_TTL <= 0 or INFO_CACHE_MAX <= 0:
+        return
+    with _INFO_CACHE_LOCK:
+        _INFO_CACHE[url] = (time.monotonic(), copy.deepcopy(payload))
+        _INFO_CACHE.move_to_end(url)
+        while len(_INFO_CACHE) > INFO_CACHE_MAX:
+            _INFO_CACHE.popitem(last=False)
 
 
 def _normalize_download_options(download_type, quality) -> tuple[str, str]:
@@ -57,11 +112,24 @@ def _video_height(quality: str) -> str | None:
 
 
 def process_info_request(url: str) -> dict:
-    """Extrae metadatos y resoluciones del video usando yt-dlp."""
+    """Extrae metadatos y resoluciones usando una cache TTL en memoria."""
     es_valido, mensaje = validate_youtube_url(url)
     if not es_valido:
         return {"success": False, "error": mensaje}
 
+    cache_key = url.strip()
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    result = _extract_info(cache_key)
+    if result.get("success"):
+        _cache_put(cache_key, result)
+    return result
+
+
+def _extract_info(url: str) -> dict:
+    """Consulta yt-dlp y normaliza la respuesta de metadatos."""
     ydl_opts = ydl_opts_with_cookies(
         {
             "quiet": True,
@@ -143,7 +211,14 @@ def process_download_request(
         raise ValueError(mensaje)
 
     download_type, quality = _normalize_download_options(download_type, quality)
+    with _DOWNLOAD_SEMAPHORE:
+        return _download_to_temp(url, download_type, quality)
 
+
+def _download_to_temp(
+    url: str, download_type: str, quality: str
+) -> tuple[str, str, str]:
+    """Descarga real; el semaforo se adquiere en process_download_request."""
     temp_dir = tempfile.mkdtemp(prefix=TEMP_DIR_PREFIX, dir=get_temp_root())
     outtmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
     ffmpeg_available = has_ffmpeg()

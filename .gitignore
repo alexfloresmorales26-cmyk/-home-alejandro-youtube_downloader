@@ -27,3 +27,6 @@ downloads/
 *.swo
 .venv/
 cookies.txt
+
+# Tooling de desarrollo (Node)
+node_modules/

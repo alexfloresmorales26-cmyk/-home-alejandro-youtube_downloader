@@ -217,6 +217,31 @@ con `ModuleNotFoundError`.
    ```
    Abre en tu navegador: `http://localhost:5000`
 
+### 🎨 Regenerar el CSS de Tailwind (solo desarrollo)
+
+El CSS de Tailwind está precompilado y versionado en `static/css/tailwind.min.css`,
+por lo que producción no necesita Node. Si cambias clases en `templates/` o
+`static/js/`, regenera el archivo:
+
+```bash
+npm install
+npm run build:css
+```
+
+No edites `static/css/tailwind.min.css` a mano: se genera desde
+`static/css/tailwind.input.css` con la configuración de `tailwind.config.js`.
+Las clases generadas dinámicamente deben escribirse completas en el HTML o en
+`static/js/` para que el escáner de Tailwind las detecte.
+
+### ⚙️ Variables de entorno de rendimiento
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `YTDLP_TEMP_DIR` | temporal del sistema | Raíz de las descargas temporales. En local conviene un disco real (por ejemplo `./downloads/.tmp`); en Vercel/Render deja el valor por defecto. |
+| `YTDLP_MAX_CONCURRENT_DOWNLOADS` | `2` | Descargas simultáneas máximas por proceso. |
+| `YTDLP_INFO_CACHE_TTL` | `120` | Segundos que se reutilizan los metadatos. `0` desactiva la caché. |
+| `YTDLP_INFO_CACHE_MAX` | `64` | Número máximo de análisis de metadatos cacheados. |
+
 ---
 
 ## 🐳 Docker (recomendado para despliegue)

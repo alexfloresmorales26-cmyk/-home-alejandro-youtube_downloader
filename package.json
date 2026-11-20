@@ -1,0 +1,13 @@
+{
+  "name": "youtube-downloader-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tooling de desarrollo para generar el CSS de Tailwind.",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/tailwind.input.css -o ./static/css/tailwind.min.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/tailwind.input.css -o ./static/css/tailwind.min.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}
