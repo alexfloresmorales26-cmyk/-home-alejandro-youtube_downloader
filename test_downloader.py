@@ -49,6 +49,18 @@ class TestYouTubeDownloader(unittest.TestCase):
         self.assertTrue(hasattr(Colors, "CYAN"))
         self.assertTrue(hasattr(Colors, "END"))
 
+    def test_cookies_status_does_not_expose_source(self):
+        """cookies_status() no debe revelar el origen ni el valor de las cookies."""
+        import cookies as cookie_module
+
+        status = cookie_module.cookies_status()
+        self.assertNotIn("cookies_source", status)
+        self.assertNotIn("cookies_from_browser", status)
+        self.assertNotIn("cookies_file_configured", status)
+        self.assertNotIn("cookies_content_configured", status)
+        self.assertIsInstance(status["cookies_configured"], bool)
+        self.assertIsInstance(status["cookies_valid"], bool)
+
 
 if __name__ == "__main__":
     unittest.main()

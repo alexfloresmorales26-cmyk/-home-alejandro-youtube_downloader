@@ -30,6 +30,33 @@ app = Flask(
 )
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 
+# Cabeceras de seguridad aplicadas a todas las respuestas del servidor.
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self' https://cdnjs.cloudflare.com "
+        "https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com "
+        "https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    ),
+}
+
+
+@app.after_request
+def _apply_security_headers(response):
+    for name, value in SECURITY_HEADERS.items():
+        response.headers[name] = value
+    return response
+
+
 # Limpieza de restos propios de ejecuciones anteriores (solo prefijo ytdl-).
 cleanup_temp_dirs(max_age_hours=2)
 

@@ -137,7 +137,6 @@ def _extract_info(url: str) -> dict:
             "extract_flat": "in_playlist",
             "noplaylist": True,
             "socket_timeout": 30,
-            "remote_components": ["ejs:github"],
         }
     )
     try:
@@ -234,7 +233,6 @@ def _download_to_temp(
                     "no_warnings": True,
                     "noplaylist": True,
                     "socket_timeout": 30,
-                    "remote_components": ["ejs:github"],
                 }
             )
         elif download_type == "audio":
@@ -246,7 +244,6 @@ def _download_to_temp(
                 "no_warnings": True,
                 "noplaylist": True,
                 "socket_timeout": 30,
-                "remote_components": ["ejs:github"],
             }
             if ffmpeg_available:
                 options["postprocessors"] = [
@@ -269,7 +266,6 @@ def _download_to_temp(
                     "no_warnings": True,
                     "noplaylist": True,
                     "socket_timeout": 30,
-                    "remote_components": ["ejs:github"],
                 }
             )
 

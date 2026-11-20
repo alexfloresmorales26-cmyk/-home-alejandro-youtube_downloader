@@ -353,7 +353,10 @@ def ydl_opts_with_cookies(extra: dict) -> dict:
 
 
 def cookies_status() -> dict:
-    """Devuelve un resumen de diagnostico sin exponer el contenido de las cookies."""
+    """Devuelve un resumen de diagnostico sin exponer el contenido ni el origen
+
+    de las cookies.
+    """
     cookiefile_exists = False
     cookiefile_readable = False
     cookiefile_size = 0
@@ -368,16 +371,12 @@ def cookies_status() -> dict:
         except OSError:
             cookiefile_readable = False
 
+    configured = COOKIES_PATH is not None or COOKIES_FROM_BROWSER_SPEC is not None
     return {
-        "cookies_configured": COOKIES_PATH is not None
-        or COOKIES_FROM_BROWSER_SPEC is not None,
+        "cookies_configured": configured,
         "cookies_valid": COOKIES_VALID,
-        "cookies_source": COOKIES_SOURCE,
-        "cookies_file_configured": bool(COOKIES_FILE),
-        "cookies_from_browser": COOKIES_FROM_BROWSER,
-        "cookies_content_configured": bool(COOKIES_CONTENT),
         "cookiefile_exists": cookiefile_exists,
         "cookiefile_readable": cookiefile_readable,
         "cookiefile_size": cookiefile_size,
-        "cookies_error": COOKIES_ERROR,
+        "cookies_error": COOKIES_ERROR if not COOKIES_VALID else "",
     }

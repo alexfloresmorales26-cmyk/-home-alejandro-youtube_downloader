@@ -135,12 +135,35 @@ def _content_disposition(filename: str) -> str:
 class StandaloneWebHandler(SimpleHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    SECURITY_HEADERS = {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
+        "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+        "Content-Security-Policy": (
+            "default-src 'self'; "
+            "script-src 'self' https://cdnjs.cloudflare.com "
+            "https://fonts.googleapis.com; "
+            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com "
+            "https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        ),
+    }
+
+    def _apply_security_headers(self) -> None:
+        for name, value in self.SECURITY_HEADERS.items():
+            self.send_header(name, value)
+
     def _send_json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self._apply_security_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -194,6 +217,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_response(304)
             self.send_header("Cache-Control", cache_control)
             self.send_header("Last-Modified", last_modified)
+            self._apply_security_headers()
             self.end_headers()
             return
 
@@ -205,6 +229,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", cache_control)
         self.send_header("Last-Modified", last_modified)
+        self._apply_security_headers()
         self.end_headers()
         self.wfile.write(content)
 
@@ -235,6 +260,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(size))
             self.send_header("Content-Disposition", _content_disposition(filename))
             self.send_header("Cache-Control", "no-store")
+            self._apply_security_headers()
             self.end_headers()
             with open(filepath, "rb") as file_obj:
                 shutil.copyfileobj(file_obj, self.wfile, length=1024 * 1024)
@@ -259,6 +285,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(content)))
             self.send_header("Cache-Control", "no-cache")
+            self._apply_security_headers()
             self.end_headers()
             self.wfile.write(content)
             return
@@ -304,6 +331,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_response(200 if es_valido else 400)
             self.send_header("Content-Length", "0")
             self.send_header("Cache-Control", "no-store")
+            self._apply_security_headers()
             self.end_headers()
             return
 
@@ -311,6 +339,7 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Length", "0")
             self.send_header("Cache-Control", "no-cache")
+            self._apply_security_headers()
             self.end_headers()
             return
 

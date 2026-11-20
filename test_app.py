@@ -354,7 +354,9 @@ class TestCookies(unittest.TestCase):
         status = cookies.cookies_status()
         self.assertNotIn("cookies_path", status)
         self.assertNotIn("cookies_file", status)
-        self.assertIn("cookies_file_configured", status)
+        self.assertNotIn("cookies_file_configured", status)
+        self.assertNotIn("cookies_source", status)
+        self.assertIn("cookies_configured", status)
 
     def test_parse_browser_spec(self):
         self.assertEqual(
@@ -490,7 +492,9 @@ class TestFlaskApi(unittest.TestCase):
         data = self.client.get("/api/cookies-status").get_json()
         self.assertNotIn("cookies_path", data)
         self.assertNotIn("cookies_file", data)
-        self.assertIn("cookies_file_configured", data)
+        self.assertNotIn("cookies_file_configured", data)
+        self.assertNotIn("cookies_source", data)
+        self.assertIn("cookies_configured", data)
 
     def test_download_head_invalid_url_returns_400(self):
         response = self.client.head(
@@ -614,6 +618,38 @@ class TestNativeServer(unittest.TestCase):
         status, headers, _body = self._request_response("GET", "/")
         self.assertEqual(status, 200)
         self.assertEqual(headers.get("Cache-Control"), "no-cache")
+
+    def test_native_security_headers_on_index(self):
+        status, headers, _body = self._request_response("GET", "/")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(headers.get("X-Frame-Options"), "DENY")
+        self.assertEqual(headers.get("Referrer-Policy"), "no-referrer")
+        self.assertIn(
+            "frame-ancestors 'none'", headers.get("Content-Security-Policy", "")
+        )
+
+    def test_native_security_headers_on_download_head(self):
+        status, headers, body = self._request_response(
+            "HEAD", "/api/download?url=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(body, b"")
+        self.assertEqual(headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(headers.get("X-Frame-Options"), "DENY")
+        self.assertEqual(headers.get("Referrer-Policy"), "no-referrer")
+
+    def test_core_options_do_not_use_remote_components(self):
+        """Las opciones de yt-dlp no deben forzar componentes remotos de GitHub."""
+        import core as core_module
+
+        source = open(core_module.__file__, "r", encoding="utf-8").read()
+        self.assertNotIn("remote_components", source)
+
+        import downloader as downloader_module
+
+        source = open(downloader_module.__file__, "r", encoding="utf-8").read()
+        self.assertNotIn("remote_components", source)
 
 
 if __name__ == "__main__":
