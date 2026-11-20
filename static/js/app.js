@@ -69,7 +69,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const path = parsed.pathname.replace(/\/+$/, "");
 
         if (host === "youtu.be" || host === "www.youtu.be") {
-            return path.length > 1;
+            const segments = path.split("/").filter(Boolean);
+            return segments.length === 1;
         }
 
         if (path === "/watch") {
@@ -290,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
             startDownloadBtn.disabled = false;
             downloadProgressBar.classList.add("hidden");
             downloadBtnText.textContent = originalText;
-        }, 5000);
+        }, 30000);
     });
 
     videoThumbnail.addEventListener("error", () => {

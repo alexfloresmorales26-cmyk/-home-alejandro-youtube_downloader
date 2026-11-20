@@ -15,6 +15,18 @@ from urllib.parse import parse_qs, urlparse
 
 # Prefijo propio para no borrar directorios temporales de otras aplicaciones.
 TEMP_DIR_PREFIX = "ytdl-"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMP_ROOT = os.environ.get("YTDLP_TEMP_DIR", "").strip()
+if TEMP_ROOT and not os.path.isabs(TEMP_ROOT):
+    TEMP_ROOT = os.path.join(BASE_DIR, TEMP_ROOT)
+
+
+def get_temp_root() -> str:
+    """Devuelve la raiz de temporales configurada o la del sistema."""
+    root = TEMP_ROOT or tempfile.gettempdir()
+    os.makedirs(root, exist_ok=True)
+    return root
+
 
 ALLOWED_YOUTUBE_HOSTS = {
     "youtube.com",
@@ -119,7 +131,7 @@ def cleanup_temp_dirs(max_age_hours: int = 2) -> dict:
     freed_mb = 0.0
 
     try:
-        tmp_dir = tempfile.gettempdir()
+        tmp_dir = get_temp_root()
         for entry in os.listdir(tmp_dir):
             if not entry.startswith(TEMP_DIR_PREFIX):
                 continue

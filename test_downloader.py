@@ -6,7 +6,9 @@ DESCRIPCION: Suite de pruebas unitarias para validar las funciones del descargad
 =============================================================================
 """
 
+import tempfile
 import unittest
+from unittest import mock
 from downloader import (
     YouTubeDownloader,
     format_bytes,
@@ -35,6 +37,11 @@ class TestYouTubeDownloader(unittest.TestCase):
         dl = YouTubeDownloader(output_dir="downloads")
         self.assertTrue(dl.output_dir.endswith("downloads"))
         self.assertIsInstance(dl.has_ffmpeg, bool)
+
+    def test_get_available_resolutions_handles_none_formats(self):
+        downloader = YouTubeDownloader(output_dir=tempfile.mkdtemp())
+        with mock.patch.object(downloader, "get_info", return_value={"formats": None}):
+            self.assertEqual(downloader.get_available_resolutions("url"), [])
 
     def test_colors_presence(self):
         """Verifica que las constantes de formato ANSI existan."""

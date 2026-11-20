@@ -18,7 +18,12 @@ import yt_dlp
 
 from cookies import ydl_opts_with_cookies
 from downloader import _build_video_format, format_duration, has_ffmpeg
-from utils import TEMP_DIR_PREFIX, list_downloaded_files, validate_youtube_url
+from utils import (
+    TEMP_DIR_PREFIX,
+    get_temp_root,
+    list_downloaded_files,
+    validate_youtube_url,
+)
 
 DOWNLOAD_TYPES = {"video", "audio", "thumbnail"}
 AUDIO_FORMATS = {"mp3", "m4a", "wav", "flac"}
@@ -62,6 +67,8 @@ def process_info_request(url: str) -> dict:
             "quiet": True,
             "no_warnings": True,
             "extract_flat": "in_playlist",
+            "noplaylist": True,
+            "socket_timeout": 30,
             "remote_components": ["ejs:github"],
         }
     )
@@ -82,7 +89,7 @@ def process_info_request(url: str) -> dict:
         total_items = info.get("playlist_count")
         if total_items is None:
             try:
-                total_items = len(list(entries or []))
+                total_items = len(entries) if entries is not None else 0
             except TypeError:
                 total_items = 0
         thumbnails = info.get("thumbnails") or []
@@ -137,7 +144,7 @@ def process_download_request(
 
     download_type, quality = _normalize_download_options(download_type, quality)
 
-    temp_dir = tempfile.mkdtemp(prefix=TEMP_DIR_PREFIX)
+    temp_dir = tempfile.mkdtemp(prefix=TEMP_DIR_PREFIX, dir=get_temp_root())
     outtmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
     ffmpeg_available = has_ffmpeg()
 
@@ -150,6 +157,8 @@ def process_download_request(
                     "outtmpl": outtmpl,
                     "quiet": True,
                     "no_warnings": True,
+                    "noplaylist": True,
+                    "socket_timeout": 30,
                     "remote_components": ["ejs:github"],
                 }
             )
@@ -160,6 +169,8 @@ def process_download_request(
                 "outtmpl": outtmpl,
                 "quiet": True,
                 "no_warnings": True,
+                "noplaylist": True,
+                "socket_timeout": 30,
                 "remote_components": ["ejs:github"],
             }
             if ffmpeg_available:
@@ -181,6 +192,8 @@ def process_download_request(
                     "merge_output_format": "mp4" if ffmpeg_available else None,
                     "quiet": True,
                     "no_warnings": True,
+                    "noplaylist": True,
+                    "socket_timeout": 30,
                     "remote_components": ["ejs:github"],
                 }
             )
@@ -198,7 +211,7 @@ def process_download_request(
 
         # Varios archivos (playlist, miniaturas multiples): se entrega un ZIP.
         zip_path = os.path.join(temp_dir, "descarga.zip")
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zip_file:
             for file_path in files:
                 zip_file.write(file_path, arcname=os.path.basename(file_path))
         return zip_path, temp_dir, "descarga.zip"

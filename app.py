@@ -24,6 +24,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+MAX_REQUEST_BYTES = 1024 * 1024
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Limpieza de restos propios de ejecuciones anteriores (solo prefijo ytdl-).
@@ -38,6 +39,7 @@ try:
 
     FLASK_AVAILABLE = True
     app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 
     @app.route("/")
     def index():
@@ -143,6 +145,8 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0) or 0)
         except ValueError:
             length = 0
+        if length > MAX_REQUEST_BYTES:
+            return {}
         body = self.rfile.read(length) if length else b""
         if not body:
             return {}

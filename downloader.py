@@ -151,6 +151,8 @@ class YouTubeDownloader:
                 "quiet": True,
                 "no_warnings": True,
                 "extract_flat": "in_playlist",
+                "noplaylist": True,
+                "socket_timeout": 30,
                 "remote_components": ["ejs:github"],
             }
         )
@@ -160,7 +162,7 @@ class YouTubeDownloader:
     def get_available_resolutions(self, url: str) -> List[str]:
         """Obtiene las resoluciones de video disponibles ordenadas de mayor a menor."""
         info = self.get_info(url) or {}
-        formats = info.get("formats", [])
+        formats = info.get("formats") or []
         heights = set()
 
         for f in formats:
@@ -189,6 +191,8 @@ class YouTubeDownloader:
                 "progress_hooks": [self._progress_hook],
                 "no_warnings": True,
                 "quiet": True,
+                "noplaylist": True,
+                "socket_timeout": 30,
                 "remote_components": ["ejs:github"],
             }
         )
@@ -233,6 +237,8 @@ class YouTubeDownloader:
                     "progress_hooks": [self._progress_hook],
                     "no_warnings": True,
                     "quiet": True,
+                    "noplaylist": True,
+                    "socket_timeout": 30,
                     "remote_components": ["ejs:github"],
                 }
             )
@@ -244,6 +250,8 @@ class YouTubeDownloader:
                     "progress_hooks": [self._progress_hook],
                     "no_warnings": True,
                     "quiet": True,
+                    "noplaylist": True,
+                    "socket_timeout": 30,
                     "remote_components": ["ejs:github"],
                 }
             )
@@ -292,6 +300,7 @@ class YouTubeDownloader:
                 "progress_hooks": [self._progress_hook],
                 "no_warnings": True,
                 "quiet": True,
+                "socket_timeout": 30,
                 "remote_components": ["ejs:github"],
             }
         )
@@ -314,6 +323,8 @@ class YouTubeDownloader:
                 "outtmpl": outtmpl,
                 "no_warnings": True,
                 "quiet": True,
+                "noplaylist": True,
+                "socket_timeout": 30,
                 "remote_components": ["ejs:github"],
             }
         )
@@ -337,6 +348,8 @@ class YouTubeDownloader:
                 "outtmpl": outtmpl,
                 "no_warnings": True,
                 "quiet": True,
+                "noplaylist": True,
+                "socket_timeout": 30,
                 "remote_components": ["ejs:github"],
             }
         )

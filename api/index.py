@@ -28,6 +28,7 @@ app = Flask(
     template_folder=os.path.join(PROJECT_ROOT, "templates"),
     static_folder=os.path.join(PROJECT_ROOT, "static"),
 )
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 
 # Limpieza de restos propios de ejecuciones anteriores (solo prefijo ytdl-).
 cleanup_temp_dirs(max_age_hours=2)

@@ -112,6 +112,37 @@ class TestDownloadOptions(unittest.TestCase):
         self.assertIsNone(_video_height("abc"))
         self.assertIsNone(_video_height("1080"))
 
+    def test_info_forces_single_video_and_timeout(self):
+        fake_info = {"title": "Video", "formats": []}
+        with mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls:
+            ydl_cls.return_value.__enter__.return_value.extract_info.return_value = (
+                fake_info
+            )
+            result = process_info_request(
+                "https://www.youtube.com/watch?v=abc&list=PL123"
+            )
+        opts = ydl_cls.call_args[0][0]
+        self.assertTrue(opts.get("noplaylist"))
+        self.assertEqual(opts.get("socket_timeout"), 30)
+        self.assertTrue(result["success"])
+
+    def test_download_forces_single_video_and_timeout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_file = os.path.join(tmp, "video.mp4")
+            with open(fake_file, "wb") as handle:
+                handle.write(b"x")
+            with mock.patch("core.yt_dlp.YoutubeDL") as ydl_cls, mock.patch(
+                "core.tempfile.mkdtemp", return_value=tmp
+            ), mock.patch("core.list_downloaded_files", return_value=[fake_file]):
+                process_download_request(
+                    "https://www.youtube.com/watch?v=abc&list=PL123",
+                    "video",
+                    "1080p",
+                )
+        opts = ydl_cls.call_args[0][0]
+        self.assertTrue(opts.get("noplaylist"))
+        self.assertEqual(opts.get("socket_timeout"), 30)
+
     def test_format_string_never_contains_invalid_height(self):
         self.assertNotIn("abc", _build_video_format("abc", ffmpeg=True))
         self.assertNotIn("height=0", _build_video_format("0", ffmpeg=True))
