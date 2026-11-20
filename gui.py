@@ -82,6 +82,7 @@ def main():
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n\nCerrando aplicación... ¡Hasta pronto!")
+    finally:
         server.server_close()
 
 

@@ -1,4 +1,4 @@
-name: Create PR for formatted branch
+name: Create PR for pushed branch
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 jobs:
   create-pr:
     runs-on: ubuntu-latest
-    if: github.ref_type == 'branch' && github.ref != 'refs/heads/main'
+    if: github.ref_type == 'branch' && github.ref != 'refs/heads/main' && !startsWith(github.ref_name, 'autoformat/')
 
     steps:
       - name: Create PR if missing
@@ -15,23 +15,22 @@ jobs:
           GITHUB_API: https://api.github.com
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           owner=$(echo "$REPO" | cut -d'/' -f1)
           repo=$(echo "$REPO" | cut -d'/' -f2)
 
           echo "Checking for existing PR from $BRANCH to main in $REPO"
-          existing=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "$GITHUB_API/repos/$owner/$repo/pulls?head=$owner:$BRANCH&base=main")
-          if echo "$existing" | grep -q '"number"'; then
+          existing=$(curl -s -H "Authorization: Bearer $TOKEN" "$GITHUB_API/repos/$owner/$repo/pulls?head=$owner:$BRANCH&base=main")
+          if echo "$existing" | jq -e 'length > 0' >/dev/null 2>&1; then
             echo "PR already exists. Exiting."
             exit 0
           fi
 
           echo "Creating PR from $BRANCH -> main"
           title="ci: autoformat branch $BRANCH"
-          body="Automated PR created by CI: applies formatting and lint fixes on branch $BRANCH.\n\nIf acceptable, merge this PR.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+          body="Automated PR created by CI: applies formatting and lint fixes on branch $BRANCH."
 
-          create_resp=$(curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" \
-            -d "{\"title\": \"$title\", \"head\": \"$BRANCH\", \"base\": \"main\", \"body\": \"$body\"}" \
-            "$GITHUB_API/repos/$owner/$repo/pulls")
-
+          payload=$(jq -n --arg title "$title" --arg head "$BRANCH" --arg base "main" --arg body "$body" '{title: $title, head: $head, base: $base, body: $body}')
+          create_resp=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "$payload" "$GITHUB_API/repos/$owner/$repo/pulls")
           echo "Create response: $create_resp"

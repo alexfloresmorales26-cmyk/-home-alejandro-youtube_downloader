@@ -23,4 +23,5 @@ COPY . .
 EXPOSE 8080
 
 # Comando de inicio para Render (modo Flask con gunicorn)
-CMD exec gunicorn -b 0.0.0.0:$PORT app:app
+CMD exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 \
+    --worker-class gthread --timeout 600 --graceful-timeout 30 app:app

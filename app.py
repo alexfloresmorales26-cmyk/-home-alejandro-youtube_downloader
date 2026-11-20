@@ -27,7 +27,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Limpieza de restos propios de ejecuciones anteriores (solo prefijo ytdl-).
-CLEANUP_RESULT = cleanup_temp_dirs(max_age_hours=2)
+cleanup_temp_dirs(max_age_hours=2)
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +45,9 @@ try:
 
     @app.route("/api/info", methods=["POST"])
     def api_info():
-        data = request.get_json(silent=True) or {}
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            data = {}
         res = process_info_request(str(data.get("url", "")).strip())
         status = 200 if res.get("success") else 400
         return jsonify(res), status
@@ -66,10 +68,12 @@ try:
     @app.route("/api/download", methods=["GET", "POST"])
     def api_download():
         if request.method == "POST":
-            data = request.get_json(silent=True) or request.form or {}
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                data = request.form or {}
             url = str(data.get("url", "")).strip()
-            download_type = data.get("type", "video")
-            quality = data.get("quality", "best")
+            download_type = str(data.get("type", "video") or "video")
+            quality = str(data.get("quality", "best") or "best")
         else:
             url = request.args.get("url", "").strip()
             download_type = request.args.get("type", "video")
@@ -210,10 +214,17 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             self.wfile.write(content)
             return
 
+        if path == "/api/cookies-status":
+            payload = cookie_config.cookies_status()
+            payload["ffmpeg_available"] = has_ffmpeg()
+            payload["yt_dlp_installed"] = True
+            self._send_json(200, payload)
+            return
+
         if path.startswith("/static/"):
             rel_path = path[len("/static/") :]
-            file_path = os.path.abspath(os.path.join(STATIC_DIR, rel_path))
-            static_root = os.path.abspath(STATIC_DIR)
+            file_path = os.path.realpath(os.path.join(STATIC_DIR, rel_path))
+            static_root = os.path.realpath(STATIC_DIR)
             try:
                 inside_static = (
                     os.path.commonpath([static_root, file_path]) == static_root
@@ -289,7 +300,10 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
 
 
 def run_server():
-    port = int(os.environ.get("PORT", 5000))
+    try:
+        port = int(os.environ.get("PORT", 5000))
+    except (TypeError, ValueError):
+        port = 5000
     if FLASK_AVAILABLE:
         print(f"\n[Flask] Iniciando servidor web en: http://localhost:{port}")
         app.run(host="0.0.0.0", port=port, debug=False)

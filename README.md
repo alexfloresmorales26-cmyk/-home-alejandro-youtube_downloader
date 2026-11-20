@@ -90,7 +90,8 @@ YTDLP_COOKIES_FROM_BROWSER=chrome
 # También admite perfiles: firefox:default, chrome+keyring:perfil
 ```
 
-El archivo `cookies.txt` es local y no está versionado (está en `.gitignore` por seguridad). Cada usuario debe crear el suyo propio exportando las cookies de su navegador. El endpoint `/api/cookies-status` permite comprobar si se detectaron correctamente.
+El archivo `cookies.txt` es local y no está versionado (está en `.gitignore` por seguridad). Cada usuario debe crear el suyo propio exportando las cookies de su navegador. El endpoint `/api/cookies-status` (disponible en Flask y en el servidor nativo) permite
+comprobar si se detectaron correctamente, sin exponer rutas ni contenido de las cookies.
 
 ---
 
@@ -163,7 +164,17 @@ Render despliega usando el `Dockerfile` que incluye **ffmpeg**, permitiendo desc
 2. Añade la variable de entorno `YTDLP_COOKIES`.
 3. Despliega.
 
-**Nota:** En Vercel no hay ffmpeg disponible, por lo que las conversiones de audio y merge de video+audio tendrán limitaciones.
+**Limitaciones importantes de Vercel:**
+
+- No hay `ffmpeg`, por lo que las conversiones de audio y el merge de video+audio no funcionan.
+- Las funciones serverless tienen un límite de tiempo de ejecución y de tamaño de respuesta
+  (unos 4,5 MB), insuficiente para la mayoría de videos. La descarga puede fallar aunque
+  el análisis de metadatos funcione.
+- Para descargas reales usa **Render**, Docker o un servidor propio.
+
+El `vercel.json` incluye los módulos compartidos (`core.py`, `cookies.py`, `utils.py`,
+`downloader.py`) y las carpetas `templates/` y `static/` para que el despliegue no falle
+con `ModuleNotFoundError`.
 
 ---
 
@@ -192,7 +203,7 @@ Render despliega usando el `Dockerfile` que incluye **ffmpeg**, permitiendo desc
 
 4. Ejecutar tests unitarios:
    ```bash
-   python -m unittest test_downloader.py -v
+   python -m unittest -v
    ```
 
 5. Ejecutar la aplicación en modo consola (CLI):

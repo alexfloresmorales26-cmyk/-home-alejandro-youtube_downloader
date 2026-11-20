@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Elementos del video
     const videoThumbnail = document.getElementById("video-thumbnail");
     const videoDuration = document.getElementById("video-duration");
+    const videoDurationValue = document.getElementById("video-duration-value");
     const videoTitle = document.getElementById("video-title");
     const videoAuthor = document.getElementById("video-author");
     const videoViews = document.getElementById("video-views");
@@ -174,12 +175,26 @@ document.addEventListener("DOMContentLoaded", () => {
             const isPlaylist = Boolean(data.is_playlist);
             videoTitle.textContent = data.title || "Sin titulo";
             videoAuthor.textContent = data.uploader || "Desconocido";
-            videoDuration.textContent = data.duration || (isPlaylist ? `${data.total_items || 0} elementos` : "N/A");
-            videoViews.textContent = data.view_count || (isPlaylist ? `${data.total_items || 0}` : "N/A");
-            if (videoViewsLabel) {
-                videoViewsLabel.textContent = isPlaylist ? "elementos" : "vistas";
+
+            if (isPlaylist) {
+                // La duracion no aplica a una lista; se oculta la insignia.
+                videoDuration.classList.add("hidden");
+                videoViews.textContent = `${data.total_items || 0}`;
+                if (videoViewsLabel) videoViewsLabel.textContent = "elementos";
+            } else {
+                videoDuration.classList.remove("hidden");
+                if (videoDurationValue) videoDurationValue.textContent = data.duration || "N/A";
+                videoViews.textContent = data.view_count || "N/A";
+                if (videoViewsLabel) videoViewsLabel.textContent = "vistas";
             }
-            videoThumbnail.src = data.thumbnail || "";
+
+            if (data.thumbnail) {
+                videoThumbnail.src = data.thumbnail;
+                videoThumbnail.classList.remove("hidden");
+            } else {
+                videoThumbnail.removeAttribute("src");
+                videoThumbnail.classList.add("hidden");
+            }
 
             // Renderizar botones de resoluciones (o aviso de playlist)
             resolutionsGrid.innerHTML = "";
@@ -242,9 +257,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(downloadUrl, { method: "HEAD" });
 
             if (!response.ok) {
-                // El servidor retornó un error (JSON), mostrarlo al usuario
-                const errorData = await fetch(downloadUrl).then(r => r.json()).catch(() => null);
-                showError(errorData?.error || "Error del servidor al preparar la descarga.");
+                // Solo se repite la petición para errores de validación (400).
+                // Un GET ante un 500 volvería a intentar la descarga completa.
+                let message = `Error del servidor al preparar la descarga (${response.status}).`;
+                if (response.status === 400) {
+                    const errorData = await fetch(downloadUrl).then(r => r.json()).catch(() => null);
+                    if (errorData?.error) message = errorData.error;
+                }
+                showError(message);
                 startDownloadBtn.disabled = false;
                 downloadProgressBar.classList.add("hidden");
                 downloadBtnText.textContent = originalText;
@@ -271,6 +291,10 @@ document.addEventListener("DOMContentLoaded", () => {
             downloadProgressBar.classList.add("hidden");
             downloadBtnText.textContent = originalText;
         }, 5000);
+    });
+
+    videoThumbnail.addEventListener("error", () => {
+        videoThumbnail.classList.add("hidden");
     });
 
     errorMessage.style.whiteSpace = "pre-line";

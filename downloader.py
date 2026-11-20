@@ -66,6 +66,11 @@ def _build_video_format(height: Optional[str] = None, ffmpeg: bool = False) -> s
     Construye la cadena de formato de video con múltiples niveles de respaldo
     para garantizar que siempre haya un formato disponible.
     """
+    if height is not None:
+        height = str(height)
+        if not height.isdigit() or int(height) <= 0:
+            height = None
+
     if height:
         if ffmpeg:
             return (
@@ -154,7 +159,7 @@ class YouTubeDownloader:
 
     def get_available_resolutions(self, url: str) -> List[str]:
         """Obtiene las resoluciones de video disponibles ordenadas de mayor a menor."""
-        info = self.get_info(url)
+        info = self.get_info(url) or {}
         formats = info.get("formats", [])
         heights = set()
 
@@ -209,6 +214,8 @@ class YouTubeDownloader:
         self, url: str, audio_format: str = "mp3", quality: str = "192"
     ) -> bool:
         """Descarga y convierte el audio a MP3, M4A, WAV o FLAC."""
+        if audio_format not in ("mp3", "m4a", "wav", "flac"):
+            audio_format = "mp3"
         outtmpl = os.path.join(self.output_dir, "%(title)s.%(ext)s")
 
         if self.has_ffmpeg:

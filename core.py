@@ -9,6 +9,7 @@ DESCRIPCION: Logica compartida de extraccion de metadatos y descargas.
 """
 
 import os
+import re
 import shutil
 import tempfile
 import zipfile
@@ -18,6 +19,36 @@ import yt_dlp
 from cookies import ydl_opts_with_cookies
 from downloader import _build_video_format, format_duration, has_ffmpeg
 from utils import TEMP_DIR_PREFIX, list_downloaded_files, validate_youtube_url
+
+DOWNLOAD_TYPES = {"video", "audio", "thumbnail"}
+AUDIO_FORMATS = {"mp3", "m4a", "wav", "flac"}
+VIDEO_QUALITY_RE = re.compile(r"^(\d{3,4})p$")
+
+
+def _normalize_download_options(download_type, quality) -> tuple[str, str]:
+    """Normaliza los parametros que llegan desde la API o la CLI."""
+    normalized_type = str(download_type or "video").strip().lower()
+    if normalized_type not in DOWNLOAD_TYPES:
+        normalized_type = "video"
+
+    normalized_quality = str(quality or "best").strip().lower()
+    if normalized_type == "audio" and normalized_quality not in AUDIO_FORMATS:
+        normalized_quality = "mp3"
+    elif (
+        normalized_type == "video"
+        and normalized_quality != "best"
+        and not VIDEO_QUALITY_RE.fullmatch(normalized_quality)
+    ):
+        normalized_quality = "best"
+    return normalized_type, normalized_quality
+
+
+def _video_height(quality: str) -> str | None:
+    """Devuelve la altura solo si la calidad tiene el formato NNNp valido."""
+    match = VIDEO_QUALITY_RE.fullmatch(quality)
+    if not match or int(match.group(1)) <= 0:
+        return None
+    return match.group(1)
 
 
 def process_info_request(url: str) -> dict:
@@ -55,8 +86,8 @@ def process_info_request(url: str) -> dict:
             except TypeError:
                 total_items = 0
         thumbnails = info.get("thumbnails") or []
-        thumbnail = (
-            thumbnails[-1].get("url", "") if thumbnails else info.get("thumbnail", "")
+        thumbnail = info.get("thumbnail") or (
+            thumbnails[-1].get("url", "") if thumbnails else ""
         )
         return {
             "success": True,
@@ -104,6 +135,8 @@ def process_download_request(
     if not es_valido:
         raise ValueError(mensaje)
 
+    download_type, quality = _normalize_download_options(download_type, quality)
+
     temp_dir = tempfile.mkdtemp(prefix=TEMP_DIR_PREFIX)
     outtmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
     ffmpeg_available = has_ffmpeg()
@@ -121,9 +154,7 @@ def process_download_request(
                 }
             )
         elif download_type == "audio":
-            audio_format = (
-                quality if quality in ("mp3", "m4a", "wav", "flac") else "mp3"
-            )
+            audio_format = quality
             options = {
                 "format": "bestaudio/best",
                 "outtmpl": outtmpl,
@@ -141,7 +172,7 @@ def process_download_request(
                 ]
             ydl_opts = ydl_opts_with_cookies(options)
         else:
-            height = quality.replace("p", "") if quality and quality != "best" else None
+            height = _video_height(quality)
             format_str = _build_video_format(height=height, ffmpeg=ffmpeg_available)
             ydl_opts = ydl_opts_with_cookies(
                 {

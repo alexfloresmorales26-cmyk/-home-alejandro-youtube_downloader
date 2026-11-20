@@ -29,12 +29,8 @@ app = Flask(
     static_folder=os.path.join(PROJECT_ROOT, "static"),
 )
 
-BASE_DIR = PROJECT_ROOT
-TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-
 # Limpieza de restos propios de ejecuciones anteriores (solo prefijo ytdl-).
-CLEANUP_RESULT = cleanup_temp_dirs(max_age_hours=2)
+cleanup_temp_dirs(max_age_hours=2)
 
 
 @app.route("/")
@@ -44,7 +40,9 @@ def index():
 
 @app.route("/api/info", methods=["POST"])
 def api_info():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        data = {}
     res = process_info_request(str(data.get("url", "")).strip())
     return jsonify(res), 200 if res.get("success") else 400
 
@@ -67,10 +65,12 @@ def api_cleanup():
 @app.route("/api/download", methods=["GET", "POST"])
 def api_download():
     if request.method == "POST":
-        data = request.get_json(silent=True) or request.form or {}
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            data = request.form or {}
         url = str(data.get("url", "")).strip()
-        download_type = data.get("type", "video")
-        quality = data.get("quality", "best")
+        download_type = str(data.get("type", "video") or "video")
+        quality = str(data.get("quality", "best") or "best")
     else:
         url = request.args.get("url", "").strip()
         download_type = request.args.get("type", "video")

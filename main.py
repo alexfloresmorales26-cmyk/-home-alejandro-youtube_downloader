@@ -9,6 +9,7 @@ DESCRIPCION: Interfaz de usuario interactiva y completa por consola.
 __version__ = "1.0.0"
 
 import os
+import sys
 import argparse
 from downloader import YouTubeDownloader, format_duration, Colors
 
@@ -40,6 +41,7 @@ def print_banner(output_dir: str, ffmpeg_status: bool):
 
 def show_video_details(info: dict):
     """Muestra la información detallada del video."""
+    info = info or {}
     print(
         f"\n{Colors.BOLD}{Colors.YELLOW}--- Información del Contenido ---{Colors.END}"
     )
@@ -98,12 +100,20 @@ def interactive_mode(downloader: YouTubeDownloader):
                 "\nIngresa la nueva ruta para guardar las descargas: "
             ).strip()
             if new_path:
-                downloader.output_dir = os.path.abspath(new_path)
-                os.makedirs(downloader.output_dir, exist_ok=True)
-                print(
-                    f"{Colors.GREEN}✓ Carpeta actualizada a:"
-                    f" {downloader.output_dir}{Colors.END}"
-                )
+                try:
+                    new_output = os.path.abspath(new_path)
+                    os.makedirs(new_output, exist_ok=True)
+                except OSError as exc:
+                    print(
+                        f"{Colors.RED}[!] No se pudo usar esa carpeta:"
+                        f" {exc}{Colors.END}"
+                    )
+                else:
+                    downloader.output_dir = new_output
+                    print(
+                        f"{Colors.GREEN}✓ Carpeta actualizada a:"
+                        f" {downloader.output_dir}{Colors.END}"
+                    )
             input("\nPresiona Enter para continuar...")
             continue
 
@@ -267,6 +277,7 @@ def parse_args():
         "--format",
         type=str,
         default="mp3",
+        choices=["mp3", "m4a", "wav", "flac"],
         help="Formato de audio (mp3, m4a, wav, flac)",
     )
     parser.add_argument(
@@ -302,17 +313,20 @@ def main():
     print(f"Destino: {downloader.output_dir}")
 
     if args.thumbnail:
-        downloader.download_thumbnail(url)
+        ok = downloader.download_thumbnail(url)
     elif args.subtitles:
-        downloader.download_subtitles(url)
+        ok = downloader.download_subtitles(url)
     elif args.playlist:
-        downloader.download_playlist(
+        ok = downloader.download_playlist(
             url, audio_only=args.audio, resolution=args.resolution
         )
     elif args.audio:
-        downloader.download_audio(url, audio_format=args.format)
+        ok = downloader.download_audio(url, audio_format=args.format)
     else:
-        downloader.download_video(url, resolution=args.resolution)
+        ok = downloader.download_video(url, resolution=args.resolution)
+
+    if not ok:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

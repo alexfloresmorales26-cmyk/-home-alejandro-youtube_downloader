@@ -16,6 +16,7 @@ app.py, gui.py o main.py desde cualquier directorio.
 """
 
 import atexit
+import io
 import os
 import re
 import tempfile
@@ -66,6 +67,7 @@ COOKIES_SOURCE = "none"
 COOKIES_FROM_BROWSER_SPEC: tuple[str, str | None, str | None, str | None] | None = None
 
 _TEMP_COOKIE_FILES: list[str] = []
+_COOKIES_CONTENT_SANITIZED = ""
 
 
 def _cleanup_temp_cookie_files() -> None:
@@ -236,9 +238,11 @@ def _write_temp_cookies(content: str) -> str:
 def _load_from_content(content: str, source: str) -> bool:
     """Sanea, valida y registra el contenido de cookies indicado."""
     global COOKIES_PATH, COOKIES_VALID, COOKIES_ERROR, COOKIES_SOURCE
+    global _COOKIES_CONTENT_SANITIZED
 
     sanitized, dropped = sanitize_netscape_cookies(content)
     if is_netscape_cookies(sanitized):
+        _COOKIES_CONTENT_SANITIZED = sanitized
         COOKIES_PATH = _write_temp_cookies(sanitized)
         COOKIES_VALID = True
         COOKIES_SOURCE = source
@@ -249,6 +253,7 @@ def _load_from_content(content: str, source: str) -> bool:
             )
         return True
 
+    _COOKIES_CONTENT_SANITIZED = ""
     COOKIES_ERROR = (
         "No se encontraron cookies validas de YouTube/Google. Verifica que el "
         "archivo sea un cookies.txt en formato Netscape y que hayas iniciado "
@@ -289,27 +294,34 @@ def parse_browser_spec(value: str) -> tuple[str, str | None, str | None, str | N
 def load_cookie_config() -> None:
     """Carga la configuracion de cookies desde las variables de entorno."""
     global COOKIES_PATH, COOKIES_VALID, COOKIES_ERROR, COOKIES_SOURCE
-    global COOKIES_FROM_BROWSER_SPEC
+    global COOKIES_FROM_BROWSER_SPEC, _COOKIES_CONTENT_SANITIZED
 
     COOKIES_PATH = None
     COOKIES_VALID = False
     COOKIES_ERROR = ""
     COOKIES_SOURCE = "none"
     COOKIES_FROM_BROWSER_SPEC = None
+    _COOKIES_CONTENT_SANITIZED = ""
 
     if COOKIES_CONTENT:
         _load_from_content(COOKIES_CONTENT, "YTDLP_COOKIES")
     elif COOKIES_FILE:
         if not os.path.isfile(COOKIES_FILE):
-            COOKIES_ERROR = f"El archivo de cookies no existe: {COOKIES_FILE}"
+            COOKIES_ERROR = (
+                "El archivo de cookies configurado no existe: "
+                f"{os.path.basename(COOKIES_FILE)}"
+            )
         else:
             try:
                 with open(COOKIES_FILE, "r", encoding="utf-8", errors="replace") as f:
                     file_content = f.read()
             except OSError as exc:
-                COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {exc}"
+                COOKIES_ERROR = (
+                    "No se pudo leer el archivo de cookies: "
+                    f"{exc.strerror or 'error de lectura'}"
+                )
             else:
-                _load_from_content(file_content, f"YTDLP_COOKIES_FILE ({COOKIES_FILE})")
+                _load_from_content(file_content, "YTDLP_COOKIES_FILE")
     elif COOKIES_FROM_BROWSER:
         try:
             COOKIES_FROM_BROWSER_SPEC = parse_browser_spec(COOKIES_FROM_BROWSER)
@@ -324,8 +336,16 @@ load_cookie_config()
 
 
 def ydl_opts_with_cookies(extra: dict) -> dict:
-    """Agrega cookies a las opciones de yt-dlp si estan disponibles."""
-    if COOKIES_PATH:
+    """Agrega cookies a las opciones de yt-dlp si estan disponibles.
+
+    yt-dlp reescribe el ``cookiefile`` al cerrar la instancia. Compartir un
+    unico archivo entre peticiones concurrentes permitiria que una instancia
+    lo trunque mientras otra lo esta leyendo, asi que se entrega una copia en
+    memoria independiente por cada instancia de ``YoutubeDL``.
+    """
+    if _COOKIES_CONTENT_SANITIZED:
+        extra["cookiefile"] = io.StringIO(_COOKIES_CONTENT_SANITIZED)
+    elif COOKIES_PATH:
         extra["cookiefile"] = COOKIES_PATH
     if COOKIES_FROM_BROWSER_SPEC:
         extra["cookiesfrombrowser"] = COOKIES_FROM_BROWSER_SPEC
@@ -353,8 +373,7 @@ def cookies_status() -> dict:
         or COOKIES_FROM_BROWSER_SPEC is not None,
         "cookies_valid": COOKIES_VALID,
         "cookies_source": COOKIES_SOURCE,
-        "cookies_file": COOKIES_FILE,
-        "cookies_path": COOKIES_PATH,
+        "cookies_file_configured": bool(COOKIES_FILE),
         "cookies_from_browser": COOKIES_FROM_BROWSER,
         "cookies_content_configured": bool(COOKIES_CONTENT),
         "cookiefile_exists": cookiefile_exists,

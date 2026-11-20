@@ -26,6 +26,7 @@ ALLOWED_YOUTUBE_HOSTS = {
 }
 
 DOWNLOAD_TEMP_SUFFIXES = (".part", ".ytdl", ".temp", ".tmp")
+ACTIVE_DOWNLOAD_SUFFIXES = (".part", ".ytdl")
 
 YOUTUBE_URL_ERROR = (
     "La URL no parece ser de YouTube. Ejemplos validos:\n"
@@ -63,7 +64,8 @@ def validate_youtube_url(url: str) -> tuple[bool, str]:
     path = parsed.path.rstrip("/")
 
     if host in ("youtu.be", "www.youtu.be"):
-        if path.strip("/"):
+        segments = [segment for segment in path.split("/") if segment]
+        if len(segments) == 1:
             return True, ""
         return False, YOUTUBE_URL_ERROR
 
@@ -88,6 +90,28 @@ def validate_youtube_url(url: str) -> tuple[bool, str]:
     return False, YOUTUBE_URL_ERROR
 
 
+def _has_active_download(directory: str, cutoff: float) -> bool:
+    """Detecta descargas en curso para no borrarlas durante la limpieza.
+
+    Un video puede tardar horas: el directorio conserva su mtime original,
+    pero el archivo ``.part`` se sigue modificando. Si hay restos parciales o
+    archivos recientes, se considera activo y no se elimina.
+    """
+    try:
+        for root, _dirs, files in os.walk(directory):
+            for filename in files:
+                if filename.lower().endswith(ACTIVE_DOWNLOAD_SUFFIXES):
+                    return True
+                try:
+                    if os.path.getmtime(os.path.join(root, filename)) > cutoff:
+                        return True
+                except OSError:
+                    continue
+    except OSError:
+        return True
+    return False
+
+
 def cleanup_temp_dirs(max_age_hours: int = 2) -> dict:
     """Elimina directorios temporales propios (prefijo ytdl-) ya finalizados."""
     cleaned = 0
@@ -108,6 +132,10 @@ def cleanup_temp_dirs(max_age_hours: int = 2) -> dict:
                 mtime = os.path.getmtime(entry_path)
                 age_hours = (time.time() - mtime) / 3600.0
                 if age_hours <= max_age_hours:
+                    continue
+
+                cutoff = time.time() - (max_age_hours * 3600)
+                if _has_active_download(entry_path, cutoff):
                     continue
 
                 size = 0
@@ -149,6 +177,11 @@ def list_downloaded_files(temp_dir: str) -> list[str]:
         if not os.path.isfile(path):
             continue
         if name.lower().endswith(DOWNLOAD_TEMP_SUFFIXES):
+            continue
+        try:
+            if os.path.getsize(path) <= 0:
+                continue
+        except OSError:
             continue
         files.append(path)
 

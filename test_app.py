@@ -16,7 +16,13 @@ import unittest
 from unittest import mock
 
 import cookies
-from core import process_download_request, process_info_request
+from core import (
+    _normalize_download_options,
+    _video_height,
+    process_download_request,
+    process_info_request,
+)
+from downloader import _build_video_format
 from utils import (
     TEMP_DIR_PREFIX,
     cleanup_temp_dirs,
@@ -63,6 +69,10 @@ class TestUrlValidation(unittest.TestCase):
                 self.assertFalse(es_valido)
                 self.assertTrue(mensaje)
 
+    def test_youtu_be_rejects_extra_path_segments(self):
+        self.assertFalse(validate_youtube_url("https://youtu.be/abc/def")[0])
+        self.assertTrue(validate_youtube_url("https://youtu.be/abc")[0])
+
     def test_invalid_url_does_not_crash_info(self):
         result = process_info_request("https://example.com/video")
         self.assertFalse(result["success"])
@@ -71,6 +81,41 @@ class TestUrlValidation(unittest.TestCase):
     def test_invalid_url_does_not_crash_download(self):
         with self.assertRaises(ValueError):
             process_download_request("https://example.com/video")
+
+
+class TestDownloadOptions(unittest.TestCase):
+    def test_invalid_type_falls_back_to_video(self):
+        self.assertEqual(
+            _normalize_download_options("../etc", "best"), ("video", "best")
+        )
+        self.assertEqual(_normalize_download_options(None, None), ("video", "best"))
+
+    def test_invalid_audio_format_falls_back_to_mp3(self):
+        self.assertEqual(
+            _normalize_download_options("audio", "1080p"), ("audio", "mp3")
+        )
+        self.assertEqual(
+            _normalize_download_options("audio", "FLAC"), ("audio", "flac")
+        )
+
+    def test_invalid_video_quality_falls_back_to_best(self):
+        self.assertEqual(
+            _normalize_download_options("video", "720p]&x=1"), ("video", "best")
+        )
+        self.assertEqual(
+            _normalize_download_options("video", "1080p"), ("video", "1080p")
+        )
+
+    def test_video_height_validation(self):
+        self.assertEqual(_video_height("1080p"), "1080")
+        self.assertIsNone(_video_height("0p"))
+        self.assertIsNone(_video_height("abc"))
+        self.assertIsNone(_video_height("1080"))
+
+    def test_format_string_never_contains_invalid_height(self):
+        self.assertNotIn("abc", _build_video_format("abc", ffmpeg=True))
+        self.assertNotIn("height=0", _build_video_format("0", ffmpeg=True))
+        self.assertIn("height=720", _build_video_format("720", ffmpeg=True))
 
 
 class TestCookies(unittest.TestCase):
@@ -142,6 +187,25 @@ class TestCookies(unittest.TestCase):
         self.assertFalse(cookies.is_netscape_cookies(""))
         self.assertFalse(cookies.is_netscape_cookies("esto no es una cookie"))
 
+    def test_cookie_options_use_independent_streams(self):
+        content = (
+            "# Netscape HTTP Cookie File\n"
+            ".youtube.com\tTRUE\t/\tTRUE\t1893456000\tSID\tabc\n"
+        )
+        with mock.patch.object(cookies, "_COOKIES_CONTENT_SANITIZED", content):
+            first = cookies.ydl_opts_with_cookies({})["cookiefile"]
+            second = cookies.ydl_opts_with_cookies({})["cookiefile"]
+
+        self.assertIsNot(first, second)
+        self.assertEqual(first.getvalue(), content)
+        self.assertEqual(second.getvalue(), content)
+
+    def test_cookies_status_does_not_expose_paths(self):
+        status = cookies.cookies_status()
+        self.assertNotIn("cookies_path", status)
+        self.assertNotIn("cookies_file", status)
+        self.assertIn("cookies_file_configured", status)
+
     def test_parse_browser_spec(self):
         self.assertEqual(
             cookies.parse_browser_spec("chrome"),
@@ -191,6 +255,42 @@ class TestTempFiles(unittest.TestCase):
             self.assertTrue(os.path.exists(other_dir))
             self.assertEqual(result["cleaned_dirs"], 1)
 
+    def test_cleanup_keeps_active_downloads(self):
+        with tempfile.TemporaryDirectory() as root:
+            old_time = time.time() - 3 * 3600
+            active_dir = os.path.join(root, TEMP_DIR_PREFIX + "activo")
+            stale_dir = os.path.join(root, TEMP_DIR_PREFIX + "viejo")
+            os.makedirs(active_dir)
+            os.makedirs(stale_dir)
+
+            active_part = os.path.join(active_dir, "video.mp4.part")
+            with open(active_part, "wb") as f:
+                f.write(b"datos en curso")
+            os.utime(active_dir, (old_time, old_time))
+
+            stale_file = os.path.join(stale_dir, "video.mp4")
+            with open(stale_file, "wb") as f:
+                f.write(b"resto viejo")
+            os.utime(stale_dir, (old_time, old_time))
+            os.utime(stale_file, (old_time, old_time))
+
+            with mock.patch("utils.tempfile.gettempdir", return_value=root):
+                result = cleanup_temp_dirs(max_age_hours=2)
+
+            self.assertTrue(os.path.exists(active_dir))
+            self.assertFalse(os.path.exists(stale_dir))
+            self.assertEqual(result["cleaned_dirs"], 1)
+
+    def test_list_downloaded_files_ignores_empty_files(self):
+        with tempfile.TemporaryDirectory() as root:
+            empty = os.path.join(root, "vacio.mp4")
+            valid = os.path.join(root, "video.mp4")
+            open(empty, "wb").close()
+            with open(valid, "wb") as f:
+                f.write(b"contenido")
+
+            self.assertEqual(list_downloaded_files(root), [valid])
+
     def test_list_and_pick_downloaded_files(self):
         with tempfile.TemporaryDirectory() as root:
             small = os.path.join(root, "small.mp4")
@@ -223,6 +323,24 @@ class TestFlaskApi(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(response.get_json()["success"])
+
+    def test_info_non_object_json_returns_400(self):
+        response = self.client.post(
+            "/api/info", data="[]", content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_download_non_object_json_returns_400(self):
+        response = self.client.post(
+            "/api/download", data="[]", content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_cookies_status_hides_paths(self):
+        data = self.client.get("/api/cookies-status").get_json()
+        self.assertNotIn("cookies_path", data)
+        self.assertNotIn("cookies_file", data)
+        self.assertIn("cookies_file_configured", data)
 
     def test_download_head_invalid_url_returns_400(self):
         response = self.client.head(
@@ -288,6 +406,9 @@ class TestNativeServer(unittest.TestCase):
 
     def test_native_index(self):
         self.assertEqual(self._request("GET", "/"), 200)
+
+    def test_native_cookies_status(self):
+        self.assertEqual(self._request("GET", "/api/cookies-status"), 200)
 
 
 if __name__ == "__main__":

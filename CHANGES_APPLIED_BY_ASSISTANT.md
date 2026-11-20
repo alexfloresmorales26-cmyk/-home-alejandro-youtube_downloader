@@ -42,3 +42,47 @@ Acciones aplicadas por el asistente (registro)
 Fecha de acción: 2026-11-13
 
 Nota: Las correcciones automáticas de formato serán aplicadas por el workflow Autoformat. Esas commits son realizados por github-actions[bot].
+
+## 2026-11-19 - Segunda pasada de revisión
+
+- `cookies.py`: se eliminó la condición de carrera del `cookiefile`. yt-dlp
+  reescribe el archivo al cerrar la instancia, así que dos peticiones concurrentes
+  podían truncarlo mientras otra lo leía. Ahora el contenido saneado se guarda en
+  memoria y cada instancia de `YoutubeDL` recibe su propio `io.StringIO`.
+- `cookies.py`: `cookies_status()` ya no expone rutas del sistema
+  (`cookies_path`/`cookies_file`); devuelve `cookies_file_configured` y los errores
+  usan solo el nombre base del archivo.
+- `utils.py`: la limpieza de temporales no borra descargas activas (detecta
+  archivos `.part`/`.ytdl` o archivos recientes aunque el directorio sea antiguo).
+- `utils.py`: `list_downloaded_files()` ignora archivos de 0 bytes y `youtu.be`
+  exige exactamente un segmento de ruta.
+- `core.py`: se validan `type` y `quality` antes de construir el formato de yt-dlp
+  (`DOWNLOAD_TYPES`, `AUDIO_FORMATS`, `VIDEO_QUALITY_RE`); una calidad inválida cae
+  a `best` y una altura `0`/no numérica se descarta. La miniatura de playlist
+  prefiere `info["thumbnail"]`.
+- `downloader.py`: `_build_video_format()` rechaza alturas no numéricas o `0`;
+  `get_available_resolutions()` es tolerante a `None`; `download_audio()` valida el
+  formato recibido.
+- `app.py` y `api/index.py`: un cuerpo JSON que no sea objeto devuelve 400 en vez
+  de 500; `type`/`quality` se convierten a texto; el servidor nativo incorpora
+  `GET /api/cookies-status`; las rutas estáticas usan `realpath` (symlinks) y un
+  `PORT` inválido cae a 5000.
+- Frontend: la duración se escribe en `#video-duration-value` para no borrar el
+  icono; en playlists se oculta la insignia; una miniatura ausente no genera una
+  petición inválida y un error de carga la oculta; el fallback de error solo repite
+  la petición ante un 400.
+- Despliegue: gunicorn usa `gthread` con `--timeout 600` para no matar descargas
+  largas; `vercel.json` incluye los módulos compartidos y `templates/`/`static/`.
+- Workflows: se define `TOKEN` en `autoformat.yml` y `create-pr.yml` (fallaban con
+  401), los payloads JSON se construyen con `jq`, el autoformateo solo corre en
+  `main`, `create-pr` omite ramas `autoformat/*` y el auto-merge solo fusiona PRs
+  de `autoformat/*` con checks exitosos y estado `clean`/`has_hooks`.
+- `main.py`: `show_video_details()` tolera `None`, el cambio de carpeta maneja
+  `OSError`, `--format` usa `choices` y la CLI sale con código 1 si falla la
+  descarga. `gui.py`: `server_close()` se ejecuta siempre en `finally`.
+- README: comando de pruebas completo, eliminación de `APP_MODE` (no existía) y
+  límites reales de Vercel (sin ffmpeg, ~4,5 MB de respuesta y tiempo de ejecución).
+- Pruebas: 40 en total (`python -m unittest -v`), con cobertura nueva para
+  normalización de opciones, aislamiento del flujo de cookies, ocultamiento de
+  rutas, protección de descargas activas, archivos vacíos, JSON no-objeto,
+  `cookies-status` nativo y segmentos extra en `youtu.be`.
