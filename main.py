@@ -233,7 +233,7 @@ def interactive_mode(downloader: YouTubeDownloader):
             elif choice == "6":
                 print(
                     f"\n{Colors.CYAN}Descargando subtítulos en"
-                    f" español e inglés...{Colors.END}"
+                    f" español...{Colors.END}"
                 )
                 ok = downloader.download_subtitles(url, lang="es")
                 if ok:

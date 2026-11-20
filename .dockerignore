@@ -1,0 +1,29 @@
+# Nunca incluir secretos ni archivos locales en la imagen
+.env
+.env.*
+cookies.txt
+*.pem
+*.key
+
+# Entornos virtuales y caches
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+
+# Control de versiones y configuracion de desarrollo
+.git
+.github
+.vscode
+.idea
+.pre-commit-config.yaml
+.flake8
+requirements-dev.txt
+test_*.py
+
+# Descargas y documentacion
+downloads
+*.md

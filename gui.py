@@ -14,7 +14,7 @@ import socket
 import threading
 import subprocess
 import webbrowser
-from http.server import HTTPServer
+from http.server import ThreadingHTTPServer
 from app import StandaloneWebHandler
 
 
@@ -67,7 +67,7 @@ def main():
     port = find_free_port(5000)
     url = f"http://127.0.0.1:{port}"
     # Crear servidor HTTP local
-    server = HTTPServer(("127.0.0.1", port), StandaloneWebHandler)
+    server = ThreadingHTTPServer(("127.0.0.1", port), StandaloneWebHandler)
 
     print(f"✓ Servidor local iniciado en: {url}")
     print("✓ Abriendo interfaz gráfica...")

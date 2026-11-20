@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const videoTitle = document.getElementById("video-title");
     const videoAuthor = document.getElementById("video-author");
     const videoViews = document.getElementById("video-views");
+    const videoViewsLabel = document.getElementById("video-views-label");
     const resolutionsGrid = document.getElementById("resolutions-grid");
 
     // Pestañas
@@ -31,15 +32,58 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentUrl = "";
     let currentType = "video"; // 'video' | 'audio' | 'thumbnail'
     let currentQuality = "best"; // '1080p', '720p', etc. o 'mp3', 'm4a', etc.
+    let selectedVideoQuality = "best";
+    let selectedAudioFormat = "mp3";
 
     // ---------------------------------------------------------------------------
     // Validación de URL de YouTube (frontend)
     // ---------------------------------------------------------------------------
-    const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)[a-zA-Z0-9_-]+([&?].*)?$/;
+    const ALLOWED_YOUTUBE_HOSTS = new Set([
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "music.youtube.com",
+        "youtu.be",
+        "www.youtu.be"
+    ]);
 
     function isValidYouTubeUrl(url) {
         if (!url || !url.trim()) return false;
-        return YOUTUBE_URL_REGEX.test(url.trim());
+
+        let candidate = url.trim();
+        if (!candidate.includes("://")) candidate = "https://" + candidate;
+
+        let parsed;
+        try {
+            parsed = new URL(candidate);
+        } catch {
+            return false;
+        }
+
+        if (!["http:", "https:"].includes(parsed.protocol)) return false;
+
+        const host = parsed.hostname.toLowerCase();
+        if (!ALLOWED_YOUTUBE_HOSTS.has(host)) return false;
+
+        const path = parsed.pathname.replace(/\/+$/, "");
+
+        if (host === "youtu.be" || host === "www.youtu.be") {
+            return path.length > 1;
+        }
+
+        if (path === "/watch") {
+            return (parsed.searchParams.get("v") || "").trim().length > 0;
+        }
+
+        if (path.startsWith("/shorts/") || path.startsWith("/live/") || path.startsWith("/embed/")) {
+            return path.split("/")[2]?.length > 0;
+        }
+
+        if (path === "/playlist") {
+            return (parsed.searchParams.get("list") || "").trim().length > 0;
+        }
+
+        return false;
     }
 
     // Cambiar pestañas
@@ -55,14 +99,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (type === "video") {
             tabVideo.classList.add("active-tab", "border-red-500", "text-red-400");
             paneVideo.classList.remove("hidden");
+            currentQuality = selectedVideoQuality;
             downloadBtnText.textContent = "Descargar Video MP4";
         } else if (type === "audio") {
             tabAudio.classList.add("active-tab", "border-red-500", "text-red-400");
             paneAudio.classList.remove("hidden");
-            downloadBtnText.textContent = "Descargar Audio MP3";
+            currentQuality = selectedAudioFormat;
+            downloadBtnText.textContent = `Descargar Audio (${currentQuality.toUpperCase()})`;
         } else if (type === "thumbnail") {
             tabThumb.classList.add("active-tab", "border-red-500", "text-red-400");
             paneThumb.classList.remove("hidden");
+            currentQuality = "best";
             downloadBtnText.textContent = "Descargar Miniatura HD";
         }
     }
@@ -76,7 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => {
             document.querySelectorAll(".audio-opt-btn").forEach(b => b.classList.remove("active-opt"));
             btn.classList.add("active-opt");
-            currentQuality = btn.getAttribute("data-audio-fmt");
+            selectedAudioFormat = btn.getAttribute("data-audio-fmt");
+            currentQuality = selectedAudioFormat;
             downloadBtnText.textContent = `Descargar Audio (${currentQuality.toUpperCase()})`;
         });
     });
@@ -123,34 +171,48 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Llenar datos en la tarjeta
-            videoTitle.textContent = data.title;
-            videoAuthor.textContent = data.uploader;
-            videoDuration.textContent = data.duration;
-            videoViews.textContent = data.view_count;
-            videoThumbnail.src = data.thumbnail;
+            const isPlaylist = Boolean(data.is_playlist);
+            videoTitle.textContent = data.title || "Sin titulo";
+            videoAuthor.textContent = data.uploader || "Desconocido";
+            videoDuration.textContent = data.duration || (isPlaylist ? `${data.total_items || 0} elementos` : "N/A");
+            videoViews.textContent = data.view_count || (isPlaylist ? `${data.total_items || 0}` : "N/A");
+            if (videoViewsLabel) {
+                videoViewsLabel.textContent = isPlaylist ? "elementos" : "vistas";
+            }
+            videoThumbnail.src = data.thumbnail || "";
 
-            // Renderizar botones de resoluciones
+            // Renderizar botones de resoluciones (o aviso de playlist)
             resolutionsGrid.innerHTML = "";
-            const resolutions = data.resolutions || ["1080p", "720p", "480p", "360p"];
+            if (isPlaylist) {
+                currentQuality = "best";
+                selectedVideoQuality = "best";
+                resolutionsGrid.innerHTML = '<p class="col-span-full text-sm text-purple-300/70">La lista completa se descargara en un archivo ZIP.</p>';
+            } else {
+                const resolutions = data.resolutions || ["1080p", "720p", "480p", "360p"];
 
-            resolutions.forEach((res, idx) => {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = `res-btn p-3 rounded-xl border font-semibold text-sm transition-all text-center ${
-                    idx === 0 ? "active-opt border-red-500 bg-red-500/10 text-white" : "border-slate-800 bg-slate-950/60 hover:border-slate-700 text-slate-300"
-                }`;
-                btn.innerHTML = `<span>${res}</span> <span class="block text-[10px] text-slate-500 font-normal">MP4</span>`;
-                
-                if (idx === 0) currentQuality = res;
+                resolutions.forEach((res, idx) => {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = `res-btn p-3 rounded-xl border font-semibold text-sm transition-all text-center ${
+                        idx === 0 ? "active-opt border-red-500 bg-red-500/10 text-white" : "border-slate-800 bg-slate-950/60 hover:border-slate-700 text-slate-300"
+                    }`;
+                    btn.innerHTML = `<span>${res}</span> <span class="block text-[10px] text-slate-500 font-normal">MP4</span>`;
 
-                btn.addEventListener("click", () => {
-                    document.querySelectorAll(".res-btn").forEach(b => b.classList.remove("active-opt"));
-                    btn.classList.add("active-opt");
-                    currentQuality = res;
+                    if (idx === 0) {
+                        currentQuality = res;
+                        selectedVideoQuality = res;
+                    }
+
+                    btn.addEventListener("click", () => {
+                        document.querySelectorAll(".res-btn").forEach(b => b.classList.remove("active-opt"));
+                        btn.classList.add("active-opt");
+                        selectedVideoQuality = res;
+                        currentQuality = res;
+                    });
+
+                    resolutionsGrid.appendChild(btn);
                 });
-
-                resolutionsGrid.appendChild(btn);
-            });
+            }
 
             switchTab("video");
             resultCard.classList.remove("hidden");
@@ -210,6 +272,8 @@ document.addEventListener("DOMContentLoaded", () => {
             downloadBtnText.textContent = originalText;
         }, 5000);
     });
+
+    errorMessage.style.whiteSpace = "pre-line";
 
     function showError(msg) {
         errorMessage.textContent = msg;

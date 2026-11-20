@@ -7,7 +7,7 @@ Aplicación todo-en-uno en Python para descargar videos, audios en MP3/M4A/WAV, 
 ## 🌟 3 Formas de Usarlo
 
 ### 1. 🖥️ Modo Aplicación de Escritorio (Desktop GUI - Recomendado)
-Abre una ventana independiente nativa en tu pantalla (como Spotify o Discord):
+Abre una ventana sin barras de navegador (Chrome/Chromium en modo app; si no está disponible, usa el navegador predeterminado):
 ```bash
 python3 gui.py
 ```
@@ -70,16 +70,27 @@ O alternativamente, sube el archivo `cookies.txt` y usa:
 ### En ejecución local:
 
 Crea un archivo `.env` en la raíz del proyecto **(archivo local, no se sube al repositorio)**:
-```
+```env
 YTDLP_COOKIES_FILE=./cookies.txt
 ```
 
-El archivo `cookies.txt` también es local y no está versionado (está en `.gitignore` por seguridad). Cada usuario debe crear el suyo propio exportando las cookies de su navegador.
+El archivo `.env` se carga automáticamente al iniciar `app.py`, `gui.py` o `main.py`
+(sin dependencias adicionales) y las rutas relativas se resuelven contra la raíz
+del proyecto, no contra el directorio desde el que ejecutes el comando.
 
-O exporta la variable:
+También puedes usar el contenido completo de las cookies:
 ```bash
 export YTDLP_COOKIES="$(cat cookies.txt)"
 ```
+
+O extraerlas directamente del navegador (opcional):
+```env
+YTDLP_COOKIES_FROM_BROWSER=chrome
+# Formatos: chrome, firefox, edge, brave, chromium, opera, vivaldi, safari
+# También admite perfiles: firefox:default, chrome+keyring:perfil
+```
+
+El archivo `cookies.txt` es local y no está versionado (está en `.gitignore` por seguridad). Cada usuario debe crear el suyo propio exportando las cookies de su navegador. El endpoint `/api/cookies-status` permite comprobar si se detectaron correctamente.
 
 ---
 
@@ -91,18 +102,23 @@ youtube_downloader/
 ├── app.py                # 🌐 Servidor Web (Flask / HTTP nativo)
 ├── main.py               # 💻 Menú interactivo por consola
 ├── downloader.py         # ⚙️ Motor de descargas con yt-dlp
+├── core.py               # 🔗 Lógica compartida de metadatos y descargas
+├── cookies.py            # 🍪 Carga y validación centralizada de cookies
+├── utils.py              # 🧰 Validación de URLs, limpieza y archivos
 ├── api/index.py          # ☁️ Punto de entrada serverless para Vercel
 ├── templates/
 │   └── index.html        # 🎨 Interfaz gráfica visual (diseño futurista púrpura)
 ├── static/
 │   ├── css/styles.css    # 🖌️ Estilos visuales
 │   └── js/app.js         # ⚡ Lógica interactiva en JavaScript
-├── test_downloader.py    # 🧪 Pruebas unitarias
+├── test_downloader.py    # 🧪 Pruebas del motor de descargas
+├── test_app.py           # 🧪 Pruebas de API, cookies y servidor nativo
 ├── VERSION               # 📌 Versión actual del proyecto (1.0.0)
 ├── .env                  # 🔐 Variables de entorno local (no se sube al repositorio)
-├── requirements.txt      # 📦 Dependencias (flask, yt-dlp, gunicorn, pywebview)
+├── requirements.txt      # 📦 Dependencias (flask, yt-dlp, gunicorn)
 ├── requirements-dev.txt  # 🛠️ Dependencias de desarrollo
 ├── Dockerfile            # 🐳 Docker para despliegue
+├── .dockerignore         # 🚫 Evita incluir .env/cookies.txt en la imagen
 ├── render.yaml           # ☁️ Configuración para Render
 ├── vercel.json           # ☁️ Configuración para Vercel
 ├── Procfile              # 📦 Procfile para Render/Heroku
@@ -122,8 +138,11 @@ youtube_downloader/
 │   │   ├── bug_report.yml
 │   │   └── feature_request.yml
 │   └── pull_request_template.md
-└── downloads/            # 📂 Carpeta donde se guardan las descargas
+└── downloads/            # 📂 Carpeta de descargas del modo CLI/GUI
 ```
+
+> Las descargas del modo web se preparan en carpetas temporales con prefijo
+> `ytdl-` y se eliminan automáticamente después de enviar el archivo.
 
 ---
 
@@ -162,7 +181,11 @@ Render despliega usando el `Dockerfile` que incluye **ffmpeg**, permitiendo desc
    pip install -r requirements.txt
    ```
 
-3. (Opcional) Configurar cookies para evitar bloqueos de YouTube:
+3. (Opcional) Configurar cookies para evitar bloqueos de YouTube. Crea un `.env`:
+   ```env
+   YTDLP_COOKIES_FILE=./cookies.txt
+   ```
+   o exporta la variable:
    ```bash
    export YTDLP_COOKIES="$(cat cookies.txt)"
    ```
@@ -194,15 +217,23 @@ docker build -t youtube-downloader:latest .
 
 Ejecutar en modo consola (interactivo):
 ```bash
-docker run --rm -it youtube-downloader:latest
+docker run --rm -it -e YTDLP_COOKIES="$(cat cookies.txt)" youtube-downloader:latest python main.py
 ```
 
 Ejecutar en modo Flask (servidor web, puerto 8080):
 ```bash
-docker run --rm -p 8080:8080 -e APP_MODE=flask -e YTDLP_COOKIES="$(cat cookies.txt)" youtube-downloader:latest
+docker run --rm -p 8080:8080 -e YTDLP_COOKIES="$(cat cookies.txt)" youtube-downloader:latest
 ```
 
 ---
+
+## 🔐 Seguridad
+
+- **No subas** `.env` ni `cookies.txt` al repositorio: contienen credenciales de tu sesión.
+- El `.dockerignore` los excluye de la imagen Docker. Aun así, revisa que no estén
+  presentes en el contexto de construcción si usas otra plataforma.
+- En producción, rota las cookies si sospechas que se han filtrado y no expongas
+  el servicio públicamente sin autenticación si no es necesario.
 
 ## 🔧 Notas y requisitos del sistema
 
@@ -214,7 +245,10 @@ docker run --rm -p 8080:8080 -e APP_MODE=flask -e YTDLP_COOKIES="$(cat cookies.t
 
 | Error | Solución |
 |-------|----------|
-| "Sign in to confirm you're not a bot" | Configura `YTDLP_COOKIES` con tus cookies de YouTube |
+| "Sign in to confirm you're not a bot" | Configura `YTDLP_COOKIES` o `YTDLP_COOKIES_FILE` con tus cookies de YouTube |
 | Descarga falla al combinar video y audio | Instala `ffmpeg` en tu sistema |
 | Puerto 5000 ocupado | Inicia con otro puerto: `PORT=8080 python3 app.py` |
 | Cookies expiradas | Renueva las cookies en tu navegador y actualiza la variable de entorno |
+| Las cookies no se detectan | Revisa `/api/cookies-status`; el archivo debe tener formato Netscape (tabuladores) |
+| YouTube cambia y las descargas fallan | Actualiza el motor: `pip install -U yt-dlp` |
+| El navegador descarga un JSON de error | Revisa los logs del servidor; suele ser una URL inválida o cookies caducadas |

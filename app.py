@@ -2,112 +2,23 @@
 =============================================================================
 MODULO: app.py
 DESCRIPCION: Servidor Web para el Descargador de YouTube.
-             Soporta ejecución con Flask (para despliegue en Render, Railway, etc.)
-             y modo nativo de respaldo con librerías estándar de Python.
+             Soporta ejecucion con Flask (Render, Railway, etc.) y modo
+             nativo de respaldo con librerias estandar de Python.
 =============================================================================
 """
 
 __version__ = "1.0.0"
 
-import os
-import io
 import json
-import glob
-import tempfile
-import urllib.parse
-import re
-import time
+import mimetypes
+import os
 import shutil
-import yt_dlp
-from downloader import format_duration, has_ffmpeg
+import urllib.parse
 
-# ---------------------------------------------------------------------------
-# Validación de URLs de YouTube
-# ---------------------------------------------------------------------------
-YOUTUBE_URL_REGEX = re.compile(
-    r"^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/playlist\?list=)[a-zA-Z0-9_-]+([&?].*)?$"
-)
-
-
-def validate_youtube_url(url: str) -> tuple[bool, str]:
-    """Valida que la URL sea de YouTube y tenga formato correcto.
-
-    Retorna (es_valido, mensaje_error).
-    """
-    if not url or not url.strip():
-        return False, "Debes ingresar una URL de YouTube."
-
-    url = url.strip()
-
-    if not YOUTUBE_URL_REGEX.match(url):
-        return False,
-        "La URL no parece ser de YouTube. Ejemplos válidos:\n"
-        "  • https://www.youtube.com/watch?v=VIDEO_ID\n"
-        "  • https://youtu.be/VIDEO_ID\n"
-        "  • https://www.youtube.com/playlist?list=PLAYLIST_ID"
-
-    return True, ""
-
-
-# ---------------------------------------------------------------------------
-# Limpieza automática de archivos temporales
-# ---------------------------------------------------------------------------
-def cleanup_temp_dirs(max_age_hours: int = 2) -> dict:
-    """Elimina directorios temporales huérfanos de descargas previas.
-
-    Busca en /tmp directorios que coincidan con el patrón de tempfile.mkdtemp()
-    y tienen más de max_age_hours de antigüedad.
-
-    Retorna un resumen de lo limpiado.
-    """
-    cleaned = 0
-    errors = 0
-    freed_mb = 0.0
-
-    try:
-        tmp_dir = tempfile.gettempdir()
-        for entry in os.listdir(tmp_dir):
-            entry_path = os.path.join(tmp_dir, entry)
-            if not os.path.isdir(entry_path):
-                continue
-
-            # Solo limpiar directorios temporales (empiezan con tmp)
-            if not entry.startswith("tmp"):
-                continue
-
-            try:
-                # Verificar antigüedad (mtime)
-                mtime = os.path.getmtime(entry_path)
-                age_hours = (time.time() - mtime) / 3600.0
-
-                if age_hours > max_age_hours:
-                    # Calcular tamaño antes de borrar
-                    size = 0
-                    for root, _dirs, files in os.walk(entry_path):
-                        for f in files:
-                            try:
-                                size += os.path.getsize(os.path.join(root, f))
-                            except OSError:
-                                pass
-
-                    shutil.rmtree(entry_path, ignore_errors=True)
-                    cleaned += 1
-                    freed_mb += size / (1024 * 1024)
-            except OSError:
-                errors += 1
-    except OSError:
-        pass
-
-    return {
-        "cleaned_dirs": cleaned,
-        "errors": errors,
-        "freed_mb": round(freed_mb, 2),
-    }
-
-
-# Ejecutar limpieza al iniciar el módulo
-CLEANUP_RESULT = cleanup_temp_dirs(max_age_hours=2)
-
+import cookies as cookie_config
+from core import process_download_request, process_info_request
+from downloader import has_ffmpeg
+from utils import cleanup_temp_dirs, validate_youtube_url
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
@@ -115,287 +26,15 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-
-# ---------------------------------------------------------------------------
-# Lectura de cookies para YouTube (evita bloqueo de bot "Sign in to confirm")
-# ---------------------------------------------------------------------------
-COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "")
-COOKIES_CONTENT = os.environ.get("YTDLP_COOKIES", "")
-COOKIES_FROM_BROWSER = os.environ.get("YTDLP_COOKIES_FROM_BROWSER", "")
-COOKIES_PATH: str | None = None
-COOKIES_VALID = False
-COOKIES_ERROR = ""
-COOKIES_SOURCE = "none"
-
-
-def _is_netscape_cookies(content: str) -> bool:
-    """Verifica si el contenido tiene formato Netscape cookies.txt."""
-    if not content or not content.strip():
-        return False
-    lines = content.strip().splitlines()
-    valid_lines = 0
-    for line in lines:
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        fields = [f for f in re.split(r"[\t ]{2,}", stripped) if f]
-        if len(fields) >= 7:
-            valid_lines += 1
-    return valid_lines > 0
-
-
-def _fix_netscape_cookies(content: str) -> str:
-    """Intenta reparar automáticamente el formato Netscape cookies.txt."""
-    if not content or not content.strip():
-        return content
-
-    lines = content.strip().splitlines()
-    fixed_lines = []
-    for line in lines:
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            fixed_lines.append(stripped)
-            continue
-        normalized = re.sub(r"[\t ]{2,}", "\t", stripped)
-        fields = normalized.split("\t")
-        if len(fields) >= 7:
-            fixed_lines.append(normalized)
-        elif fixed_lines:
-            break
-
-    return "\n".join(fixed_lines)
-
-
-if COOKIES_CONTENT:
-    if not _is_netscape_cookies(COOKIES_CONTENT):
-        fixed = _fix_netscape_cookies(COOKIES_CONTENT)
-        if fixed != COOKIES_CONTENT and _is_netscape_cookies(fixed):
-            COOKIES_CONTENT = fixed
-            _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
-            _cf.write(COOKIES_CONTENT)
-            _cf.close()
-            COOKIES_PATH = str(_cf.name)
-            COOKIES_VALID = True
-            COOKIES_SOURCE = "YTDLP_COOKIES (reparado)"
-            COOKIES_ERROR = "Cookies reparadas automáticamente (formato ajustado)."
-        else:
-            COOKIES_ERROR = (
-                "El contenido de YTDLP_COOKIES no tiene formato Netscape válido. "
-                "Posibles causas: espacios en lugar de tabuladores, o texto extra "
-                "después de las cookies. Exporta nuevamente con 'Get cookies.txt LOCALLY'."
-            )
-    else:
-        _cf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
-        _cf.write(COOKIES_CONTENT)
-        _cf.close()
-        COOKIES_PATH = str(_cf.name)
-        COOKIES_VALID = True
-        COOKIES_SOURCE = "YTDLP_COOKIES"
-elif COOKIES_FILE and os.path.exists(COOKIES_FILE):
-    try:
-        with open(COOKIES_FILE, "r", encoding="utf-8") as f:
-            file_content = f.read()
-        if not _is_netscape_cookies(file_content):
-            fixed = _fix_netscape_cookies(file_content)
-            if fixed != file_content and _is_netscape_cookies(fixed):
-                with open(COOKIES_FILE, "w", encoding="utf-8") as f:
-                    f.write(fixed)
-                COOKIES_PATH = str(COOKIES_FILE)
-                COOKIES_VALID = True
-                COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE}, reparado)"
-                COOKIES_ERROR = "Cookies del archivo reparadas automáticamente."
-            else:
-                COOKIES_ERROR = (
-                    f"El archivo {COOKIES_FILE} no tiene formato Netscape cookies.txt válido."
-                )
-        else:
-            COOKIES_PATH = str(COOKIES_FILE)
-            COOKIES_VALID = True
-            COOKIES_SOURCE = f"YTDLP_COOKIES_FILE ({COOKIES_FILE})"
-    except Exception as e:
-        COOKIES_ERROR = f"No se pudo leer {COOKIES_FILE}: {e}"
-elif COOKIES_FROM_BROWSER:
-    COOKIES_VALID = True
-    COOKIES_SOURCE = f"YTDLP_COOKIES_FROM_BROWSER ({COOKIES_FROM_BROWSER})"
-
-
-def _ydl_opts_with_cookies(extra: dict) -> dict:
-    """Agrega cookies a las opciones de yt-dlp si están disponibles."""
-    if COOKIES_PATH:
-        extra["cookiefile"] = COOKIES_PATH
-    if COOKIES_FROM_BROWSER:
-        extra["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
-    return extra
+# Limpieza de restos propios de ejecuciones anteriores (solo prefijo ytdl-).
+CLEANUP_RESULT = cleanup_temp_dirs(max_age_hours=2)
 
 
 # ---------------------------------------------------------------------------
-# Lógica común de procesamiento de API y render
-# ---------------------------------------------------------------------------
-def process_info_request(url: str) -> dict:
-    """Extrae metadatos y resoluciones del video usando yt-dlp."""
-    es_valido, mensaje = validate_youtube_url(url)
-    if not es_valido:
-        return {"success": False, "error": mensaje}
-
-    ydl_opts = _ydl_opts_with_cookies({
-        "quiet": True,
-        "no_warnings": True,
-        "extract_flat": "in_playlist",
-        "remote_components": ["ejs:github"],
-    })
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-    is_playlist = "entries" in info
-    if is_playlist:
-        return {
-            "success": True,
-            "is_playlist": True,
-            "title": info.get("title", "Lista de Reproducción"),
-            "uploader": info.get("uploader", "Varios"),
-            "total_items": len(list(info.get("entries", []))),
-            "thumbnail": info.get("thumbnails", [{}])[-1].get("url", ""),
-        }
-
-    formats = info.get("formats", [])
-    heights = set()
-    for f in formats:
-        if f.get("vcodec") != "none" and f.get("height"):
-            heights.add(f["height"])
-
-    sorted_heights = sorted(list(heights), reverse=True)
-    resolutions = [f"{h}p" for h in sorted_heights]
-    if not resolutions:
-        resolutions = ["1080p", "720p", "480p", "360p"]
-
-    return {
-        "success": True,
-        "is_playlist": False,
-        "title": info.get("title", "Sin título"),
-        "uploader": info.get("uploader", "Desconocido"),
-        "duration": format_duration(info.get("duration")),
-        "view_count": f"{info.get('view_count', 0):,}"
-        if info.get("view_count")
-        else "N/A",
-        "thumbnail": info.get("thumbnail", ""),
-        "resolutions": resolutions,
-    }
-
-
-def process_download_request(
-    url: str, download_type: str = "video", quality: str = "best"
-) -> str:
-    """Descarga el archivo en una carpeta temporal y retorna su ruta."""
-    es_valido, mensaje = validate_youtube_url(url)
-    if not es_valido:
-        raise ValueError(mensaje)
-
-    temp_dir = tempfile.mkdtemp()
-    outtmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
-    ffmpeg_available = has_ffmpeg()
-
-    if download_type == "thumbnail":
-        ydl_opts = _ydl_opts_with_cookies({
-            "writethumbnail": True,
-            "skip_download": True,
-            "outtmpl": outtmpl,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
-    elif download_type == "audio":
-        audio_format = quality if quality in ["mp3", "m4a", "wav", "flac"] else "mp3"
-        if ffmpeg_available:
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": "bestaudio/best",
-                "outtmpl": outtmpl,
-                "postprocessors": [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": audio_format,
-                        "preferredquality": "192",
-                    }
-                ],
-                "quiet": True,
-                "remote_components": ["ejs:github"],
-            })
-        else:
-            ydl_opts = _ydl_opts_with_cookies({
-                "format": "bestaudio/best",
-                "outtmpl": outtmpl,
-                "quiet": True,
-                "remote_components": ["ejs:github"],
-            })
-    else:  # video
-        if quality and quality != "best":
-            height = quality.replace("p", "")
-            if ffmpeg_available:
-                format_str = (
-                    f"bestvideo[height={height}][ext=mp4]+bestaudio[ext=m4a]"
-                    f"/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
-                    f"/bestvideo[height<={height}]+bestaudio"
-                    f"/best[height<={height}]"
-                    f"/bestvideo+bestaudio"
-                    f"/best"
-                )
-            else:
-                format_str = (
-                    f"best[height={height}][ext=mp4]"
-                    f"/best[height<={height}][ext=mp4]"
-                    f"/best[height<={height}]"
-                    f"/best"
-                )
-        else:
-            if ffmpeg_available:
-                format_str = (
-                    "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
-                )
-            else:
-                format_str = "best[ext=mp4]/best"
-
-        ydl_opts = _ydl_opts_with_cookies({
-            "format": format_str,
-            "outtmpl": outtmpl,
-            "merge_output_format": "mp4" if ffmpeg_available else None,
-            "quiet": True,
-            "remote_components": ["ejs:github"],
-        })
-
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-    except Exception:
-        import shutil
-
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise
-
-    files = glob.glob(os.path.join(temp_dir, "*"))
-    if not files:
-        import shutil
-
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise Exception("No se pudo generar el archivo de descarga.")
-
-    filepath = files[0]
-    # Leer el contenido antes de borrar la carpeta temporal
-    with open(filepath, "rb") as f:
-        content = f.read()
-    filename = os.path.basename(filepath)
-
-    import shutil
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    return content, filename
-
-
-# ---------------------------------------------------------------------------
-# Modo 1: Flask (si está instalado)
+# Modo 1: Flask (si esta instalado)
 # ---------------------------------------------------------------------------
 try:
-    from flask import Flask, render_template, request, jsonify, send_file
+    from flask import Flask, jsonify, render_template, request, send_file
 
     FLASK_AVAILABLE = True
     app = Flask(__name__)
@@ -407,53 +46,28 @@ try:
     @app.route("/api/info", methods=["POST"])
     def api_info():
         data = request.get_json(silent=True) or {}
-        res = process_info_request(data.get("url", "").strip())
+        res = process_info_request(str(data.get("url", "")).strip())
         status = 200 if res.get("success") else 400
         return jsonify(res), status
 
     @app.route("/api/cookies-status", methods=["GET"])
     def api_cookies_status():
-        """Endpoint de diagnóstico: verifica si las cookies de YouTube están configuradas."""
-        import os as _os
-
-        cookiefile_exists = False
-        cookiefile_readable = False
-        cookiefile_size = 0
-        if COOKIES_PATH and _os.path.exists(COOKIES_PATH):
-            cookiefile_exists = True
-            try:
-                cookiefile_size = _os.path.getsize(COOKIES_PATH)
-                with open(COOKIES_PATH, "r") as _f:
-                    _f.read(1)
-                cookiefile_readable = True
-            except Exception:
-                cookiefile_readable = False
-
-        return jsonify({
-            "cookies_configured": COOKIES_PATH is not None or bool(COOKIES_FROM_BROWSER),
-            "cookies_valid": COOKIES_VALID,
-            "cookies_source": COOKIES_SOURCE,
-            "cookies_path": COOKIES_PATH,
-            "cookies_from_browser": COOKIES_FROM_BROWSER,
-            "cookiefile_exists": cookiefile_exists,
-            "cookiefile_readable": cookiefile_readable,
-            "cookiefile_size": cookiefile_size,
-            "cookies_error": COOKIES_ERROR,
-            "ffmpeg_available": has_ffmpeg(),
-            "yt_dlp_installed": True,
-        })
+        """Endpoint de diagnostico: verifica la configuracion de cookies."""
+        payload = cookie_config.cookies_status()
+        payload["ffmpeg_available"] = has_ffmpeg()
+        payload["yt_dlp_installed"] = True
+        return jsonify(payload)
 
     @app.route("/api/cleanup", methods=["POST"])
     def api_cleanup():
         """Endpoint para limpieza manual de archivos temporales."""
-        result = cleanup_temp_dirs(max_age_hours=2)
-        return jsonify({"success": True, "cleanup": result})
+        return jsonify({"success": True, "cleanup": cleanup_temp_dirs(2)})
 
     @app.route("/api/download", methods=["GET", "POST"])
     def api_download():
         if request.method == "POST":
             data = request.get_json(silent=True) or request.form or {}
-            url = data.get("url", "").strip()
+            url = str(data.get("url", "")).strip()
             download_type = data.get("type", "video")
             quality = data.get("quality", "best")
         else:
@@ -461,16 +75,36 @@ try:
             download_type = request.args.get("type", "video")
             quality = request.args.get("quality", "best")
 
+        # El frontend usa HEAD como preflight: solo valida la URL, sin descargar.
+        if request.method == "HEAD":
+            es_valido, mensaje = validate_youtube_url(url)
+            if not es_valido:
+                return jsonify({"success": False, "error": mensaje}), 400
+            return "", 200
+
+        temp_dir = None
         try:
-            content, filename = process_download_request(url, download_type, quality)
-            return send_file(
-                io.BytesIO(content),
+            filepath, temp_dir, filename = process_download_request(
+                url, download_type, quality
+            )
+            response = send_file(
+                filepath,
                 as_attachment=True,
                 download_name=filename,
                 mimetype="application/octet-stream",
             )
-        except Exception as e:
-            return jsonify({"success": False, "error": str(e)}), 500
+            response.call_on_close(
+                lambda directory=temp_dir: shutil.rmtree(directory, ignore_errors=True)
+            )
+            return response
+        except ValueError as exc:
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            return jsonify({"success": False, "error": str(exc)}), 400
+        except Exception as exc:
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            return jsonify({"success": False, "error": str(exc)}), 500
 
 except ImportError:
     FLASK_AVAILABLE = False
@@ -478,20 +112,97 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Modo 2: Servidor HTTP Nativo de Python (Sin dependencias externas)
+# Modo 2: Servidor HTTP nativo de Python (sin dependencias externas)
 # ---------------------------------------------------------------------------
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+
+def _content_disposition(filename: str) -> str:
+    """Genera una cabecera Content-Disposition segura para nombres UTF-8."""
+    ascii_name = filename.encode("ascii", "ignore").decode("ascii") or "descarga"
+    ascii_name = ascii_name.replace('"', "").replace("\r", "").replace("\n", "")
+    encoded = urllib.parse.quote(filename, safe="")
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded}"
 
 
 class StandaloneWebHandler(SimpleHTTPRequestHandler):
+    def _send_json(self, status: int, payload: dict) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_request_data(self) -> dict:
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+        except ValueError:
+            length = 0
+        body = self.rfile.read(length) if length else b""
+        if not body:
+            return {}
+
+        content_type = self.headers.get("Content-Type", "")
+        if "application/json" in content_type:
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError):
+                return {}
+            return data if isinstance(data, dict) else {}
+
+        try:
+            parsed = urllib.parse.parse_qs(body.decode("utf-8"))
+        except UnicodeDecodeError:
+            return {}
+        return {key: values[0] for key, values in parsed.items() if values}
+
+    def _handle_download(
+        self, url: str, download_type: str = "video", quality: str = "best"
+    ) -> None:
+        try:
+            filepath, temp_dir, filename = process_download_request(
+                url, download_type, quality
+            )
+        except ValueError as exc:
+            self._send_json(400, {"success": False, "error": str(exc)})
+            return
+        except Exception as exc:
+            self._send_json(500, {"success": False, "error": str(exc)})
+            return
+
+        try:
+            size = os.path.getsize(filepath)
+        except OSError as exc:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            self._send_json(500, {"success": False, "error": str(exc)})
+            return
+
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(size))
+            self.send_header("Content-Disposition", _content_disposition(filename))
+            self.end_headers()
+            with open(filepath, "rb") as file_obj:
+                shutil.copyfileobj(file_obj, self.wfile, length=1024 * 1024)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
-        if path == "/" or path == "/index.html":
+        if path in ("/", "/index.html"):
             index_path = os.path.join(TEMPLATES_DIR, "index.html")
-            with open(index_path, "rb") as f:
-                content = f.read()
+            try:
+                with open(index_path, "rb") as file_obj:
+                    content = file_obj.read()
+            except OSError as exc:
+                self._send_json(500, {"success": False, "error": str(exc)})
+                return
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(content)))
@@ -503,16 +214,19 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
             rel_path = path[len("/static/") :]
             file_path = os.path.abspath(os.path.join(STATIC_DIR, rel_path))
             static_root = os.path.abspath(STATIC_DIR)
-            if os.path.commonpath(
-                [static_root, file_path]
-            ) == static_root and os.path.isfile(file_path):
-                content_type = (
-                    "text/css"
-                    if file_path.endswith(".css")
-                    else "application/javascript"
+            try:
+                inside_static = (
+                    os.path.commonpath([static_root, file_path]) == static_root
                 )
-                with open(file_path, "rb") as f:
-                    content = f.read()
+            except ValueError:
+                inside_static = False
+
+            if inside_static and os.path.isfile(file_path):
+                content_type = (
+                    mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                )
+                with open(file_path, "rb") as file_obj:
+                    content = file_obj.read()
                 self.send_response(200)
                 self.send_header("Content-Type", content_type)
                 self.send_header("Content-Length", str(len(content)))
@@ -522,52 +236,56 @@ class StandaloneWebHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/download":
             query = urllib.parse.parse_qs(parsed.query)
-            url = query.get("url", [""])[0]
-            download_type = query.get("type", ["video"])[0]
-            quality = query.get("quality", ["best"])[0]
-
-            try:
-                content, filename = process_download_request(url, download_type, quality)
-
-                self.send_response(200)
-                self.send_header("Content-Type", "application/octet-stream")
-                self.send_header(
-                    "Content-Disposition", f'attachment; filename="{filename}"'
-                )
-                self.send_header("Content-Length", str(len(content)))
-                self.end_headers()
-                self.wfile.write(content)
-            except Exception as e:
-                self.send_response(500)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(
-                    json.dumps({"success": False, "error": str(e)}).encode("utf-8")
-                )
+            self._handle_download(
+                query.get("url", [""])[0],
+                query.get("type", ["video"])[0],
+                query.get("quality", ["best"])[0],
+            )
             return
 
-        self.send_error(404, "Página no encontrada")
+        self.send_error(404, "Pagina no encontrada")
+
+    def do_HEAD(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/api/download":
+            query = urllib.parse.parse_qs(parsed.query)
+            es_valido, _mensaje = validate_youtube_url(query.get("url", [""])[0])
+            self.send_response(200 if es_valido else 400)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        if parsed.path in ("/", "/index.html"):
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        self.send_error(405, "Metodo no permitido")
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+
         if parsed.path == "/api/info":
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_length)
-            try:
-                data = json.loads(body.decode("utf-8"))
-                res = process_info_request(data.get("url", "").strip())
-                self.send_response(200 if res.get("success") else 400)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps(res).encode("utf-8"))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(
-                    json.dumps({"success": False, "error": str(e)}).encode("utf-8")
-                )
+            data = self._read_request_data()
+            res = process_info_request(str(data.get("url", "")).strip())
+            self._send_json(200 if res.get("success") else 400, res)
             return
+
+        if parsed.path == "/api/download":
+            data = self._read_request_data()
+            self._handle_download(
+                str(data.get("url", "")).strip(),
+                data.get("type", "video"),
+                data.get("quality", "best"),
+            )
+            return
+
+        if parsed.path == "/api/cleanup":
+            self._send_json(200, {"success": True, "cleanup": cleanup_temp_dirs(2)})
+            return
+
+        self.send_error(404, "Pagina no encontrada")
 
 
 def run_server():
@@ -577,9 +295,10 @@ def run_server():
         app.run(host="0.0.0.0", port=port, debug=False)
     else:
         print(
-            f"\n[HTTP Server Nativo] Iniciando servidor web en: http://localhost:{port}"
+            f"\n[HTTP Server Nativo] Iniciando servidor web en: "
+            f"http://localhost:{port}"
         )
-        server = HTTPServer(("0.0.0.0", port), StandaloneWebHandler)
+        server = ThreadingHTTPServer(("0.0.0.0", port), StandaloneWebHandler)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
