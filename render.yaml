@@ -2,7 +2,7 @@ services:
   - type: web
     name: youtube-downloader
     env: docker
-    repo: https://github.com/alexfloresmorales26-cmyk/-home-alejandro-youtube_downloader.git
+    repo: https://github.com/alexfloresmorales26-cmyk/youtube_downloader.git
     dockerContext: .
     dockerfilePath: ./Dockerfile
     envVars:
