@@ -1,97 +1,67 @@
-# 🎬 Descargador de YouTube Profesional (Desktop GUI, Web & CLI) v1.0.0
+# 🎬 Descargador de YouTube (Desktop GUI, Web & CLI)
 
-Aplicación todo-en-uno en Python para descargar videos, audios en MP3/M4A/WAV, miniaturas y listas de reproducción de YouTube en alta definición.
+Aplicación todo-en-uno en Python para descargar videos, audios (MP3/M4A/WAV/FLAC), miniaturas y listas de reproducción de YouTube. Funciona con [yt-dlp](https://github.com/yt-dlp/yt-dlp) y ofrece tres modos de uso: aplicación de escritorio, servidor web y consola.
 
 ---
 
 ## 🌟 3 Formas de Usarlo
 
-### 1. 🖥️ Modo Aplicación de Escritorio (Desktop GUI - Recomendado)
-Abre una ventana sin barras de navegador (Chrome/Chromium en modo app; si no está disponible, usa el navegador predeterminado):
+### 1. 🖥️ Modo Aplicación de Escritorio (Desktop GUI)
+
+Arranca un servidor HTTP local y abre la interfaz en una ventana del navegador (modo aplicación si el navegador lo soporta):
+
 ```bash
 python3 gui.py
 ```
 
+La terminal debe permanecer abierta mientras usas la aplicación. Presiona `Ctrl + C` para cerrar.
+
 ---
 
 ### 2. 🌐 Modo Servidor / Página Web
-Ejecuta el servidor web para acceder desde cualquier navegador o dispositivo en tu red:
+
+Ejecuta el servidor web para acceder desde cualquier navegador:
+
 ```bash
 python3 app.py
 ```
+
 Abre en tu navegador: **`http://localhost:5000`**
+
+Puedes cambiar el puerto con la variable de entorno `PORT`:
+
+```bash
+PORT=8080 python3 app.py
+```
 
 ---
 
 ### 3. 💻 Modo Consola / Terminal (CLI)
-Si prefieres usarlo directamente desde la línea de comandos:
+
+Menú interactivo por consola:
+
 ```bash
 python3 main.py
+```
+
+Uso directo con argumentos (ejemplo: descargar audio en MP3):
+
+```bash
+python3 main.py "https://www.youtube.com/watch?v=VIDEO_ID" --audio --format mp3
 ```
 
 ---
 
 ## ✨ Características Principales
 
-- 🔍 **Buscador con Previsualización**: Pega el enlace y mira la portada, autor, vistas y duración al instante.
-- 🎥 **Calidades de Video**: 1080p, 720p, 480p, 360p en formato MP4.
-- 🎵 **Formatos de Audio**: MP3 (192 kbps), M4A, WAV y FLAC.
-- 🖼️ **Miniaturas HD**: Descarga directa de la portada original del video.
-- 📋 **Listas de Reproducción**: Descarga playlists completas organizadas en subcarpetas.
-- 🎨 **Diseño Moderno y Responsivo**: Interfaz fluida con Tailwind CSS y tema oscuro futurista púrpura.
-- 🍪 **Soporte de Cookies**: Para evitar bloqueos de YouTube ("Sign in to confirm you're not a bot"), configura la variable de entorno `YTDLP_COOKIES` con el contenido de tu archivo `cookies.txt`.
-
----
-
-## 🍪 Configuración de Cookies (Importante para despliegue en la nube)
-
-YouTube puede bloquear descargas desde servidores sin navegador. Para evitar el error **"Sign in to confirm you're not a bot"**, necesitas proporcionar cookies de tu sesión de YouTube.
-
-### Cómo obtener tus cookies:
-
-1. Instala la extensión **"Get cookies.txt LOCALLY"** en tu navegador (Chrome, Firefox, Edge).
-2. Ve a [youtube.com](https://youtube.com) e inicia sesión.
-3. Haz clic en la extensión y exporta las cookies como archivo `cookies.txt`.
-4. Copia todo el contenido del archivo `cookies.txt`.
-
-### En Render (despliegue en la nube):
-
-Ve a tu servicio en Render → **Environment Variables** y añade:
-
-| Clave | Valor |
-|-------|-------|
-| `YTDLP_COOKIES` | (pega aquí todo el contenido de tu `cookies.txt`) |
-
-O alternativamente, sube el archivo `cookies.txt` y usa:
-| Clave | Valor |
-|-------|-------|
-| `YTDLP_COOKIES_FILE` | `/ruta/al/archivo/cookies.txt` |
-
-### En ejecución local:
-
-Crea un archivo `.env` en la raíz del proyecto **(archivo local, no se sube al repositorio)**:
-```env
-YTDLP_COOKIES_FILE=./cookies.txt
-```
-
-El archivo `.env` se carga automáticamente al iniciar `app.py`, `gui.py` o `main.py`
-(sin dependencias adicionales) y las rutas relativas se resuelven contra la raíz
-del proyecto, no contra el directorio desde el que ejecutes el comando.
-
-También puedes usar el contenido completo de las cookies:
-```bash
-export YTDLP_COOKIES="$(cat cookies.txt)"
-```
-
-O extraerlas directamente del navegador (opcional):
-```env
-YTDLP_COOKIES_FROM_BROWSER=chrome
-# Formatos: chrome, firefox, edge, brave, chromium, opera, vivaldi, safari
-# También admite perfiles: firefox:default, chrome+keyring:perfil
-```
-
-El archivo `cookies.txt` es local y no está versionado (está en `.gitignore` por seguridad). Cada usuario debe crear el suyo propio exportando las cookies de su navegador. El endpoint `/api/cookies-status` (disponible en Flask y en el servidor nativo) permite
-comprobar si se detectaron correctamente, sin exponer rutas ni contenido de las cookies.
+- 🔍 **Buscador con previsualización**: pega el enlace y consulta portada, autor, vistas y duración al instante.
+- 🎥 **Calidades de video**: 1080p, 720p, 480p, 360p (y las disponibles según el video) en formato MP4.
+- 🎵 **Formatos de audio**: MP3 (192 kbps), M4A, WAV y FLAC (requiere ffmpeg para conversión).
+- 🖼️ **Miniaturas HD**: descarga directa de la portada original del video.
+- 📋 **Listas de reproducción**: descarga playlists completas organizadas en subcarpetas.
+- 💬 **Subtítulos**: descarga subtítulos (.vtt / .srt) en español o inglés.
+- 🖥️ **Tres interfaces**: GUI de escritorio, servidor web (Flask / HTTP nativo) y CLI interactivo.
+- 🌑 **Tema oscuro** y diseño responsivo con Tailwind CSS.
 
 ---
 
@@ -99,192 +69,284 @@ comprobar si se detectaron correctamente, sin exponer rutas ni contenido de las 
 
 ```text
 youtube_downloader/
-├── gui.py                # 🖥️ Lanzador de la Aplicación de Escritorio
-├── app.py                # 🌐 Servidor Web (Flask / HTTP nativo)
-├── main.py               # 💻 Menú interactivo por consola
-├── downloader.py         # ⚙️ Motor de descargas con yt-dlp
-├── core.py               # 🔗 Lógica compartida de metadatos y descargas
-├── cookies.py            # 🍪 Carga y validación centralizada de cookies
-├── utils.py              # 🧰 Validación de URLs, limpieza y archivos
-├── api/index.py          # ☁️ Punto de entrada serverless para Vercel
+├── gui.py                  # 🖥️ Lanzador de la aplicación de escritorio
+├── app.py                  # 🌐 Servidor web (Flask con fallback HTTP nativo)
+├── main.py                 # 💻 Menú interactivo por consola y CLI
+├── downloader.py           # ⚙️ Motor de descargas con yt-dlp
+├── index.py                # 🌐 Flask app para despliegue en Vercel / otros
+├── api/index.py            # 🌐 Endpoint serverless para Vercel
 ├── templates/
-│   └── index.html        # 🎨 Interfaz gráfica visual (diseño futurista púrpura)
+│   └── index.html          # 🎨 Interfaz visual del modo web
 ├── static/
-│   ├── css/styles.css    # 🖌️ Estilos visuales
-│   └── js/app.js         # ⚡ Lógica interactiva en JavaScript
-├── test_downloader.py    # 🧪 Pruebas del motor de descargas
-├── test_app.py           # 🧪 Pruebas de API, cookies y servidor nativo
-├── VERSION               # 📌 Versión actual del proyecto (1.0.0)
-├── .env                  # 🔐 Variables de entorno local (no se sube al repositorio)
-├── requirements.txt      # 📦 Dependencias (flask, yt-dlp, gunicorn)
-├── requirements-dev.txt  # 🛠️ Dependencias de desarrollo
-├── Dockerfile            # 🐳 Docker para despliegue
-├── .dockerignore         # 🚫 Evita incluir .env/cookies.txt en la imagen
-├── render.yaml           # ☁️ Configuración para Render
-├── vercel.json           # ☁️ Configuración para Vercel
-├── Procfile              # 📦 Procfile para Render/Heroku
-├── runtime.txt           # 🐍 Versión de Python
-├── .flake8               # 🔧 Configuración de flake8
-├── .pre-commit-config.yaml  # 🔧 Configuración de pre-commit
-├── .gitignore            # 🚫 Archivos y carpetas ignorados por git
-├── CHANGES_APPLIED_BY_ASSISTANT.md  # 📝 Registro de cambios aplicados
+│   ├── css/
+│   │   ├── styles.css      # 🖌️ Estilos personalizados
+│   │   └── tailwind.min.css # ⚡ Tailwind CSS (compilado)
+│   └── js/
+│       └── app.js          # ⚡ Lógica interactiva en JavaScript
+├── test_downloader.py      # 🧪 Pruebas unitarias
+├── requirements.txt        # 📦 Dependencias de producción
+├── requirements-dev.txt    # 🛠️ Dependencias de desarrollo
+├── Dockerfile              # 🐳 Imagen Docker
+├── render.yaml             # ☁️ Despliegue en Render
+├── vercel.json             # ☁️ Despliegue en Vercel
+├── Procfile                # ☁️ Despliegue en Heroku / Railway
+├── runtime.txt             # ☁️ Versión de Python para PaaS
+├── .flake8                 # 🔎 Configuración de flake8
+├── .pre-commit-config.yaml # 🪝 Ganchos pre-commit
 ├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml
-│   │   ├── autoformat.yml
-│   │   ├── ci-automerge.yml
-│   │   ├── create-pr.yml
-│   │   └── notify-on-merge.yml
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.yml
-│   │   └── feature_request.yml
-│   └── pull_request_template.md
-└── downloads/            # 📂 Carpeta de descargas del modo CLI/GUI
+│   ├── workflows/          # ⚙️ CI / autoformateo
+│   ├── pull_request_template.md
+│   └── ISSUE_TEMPLATE/
+├── downloads/              # 📂 Carpeta donde se guardan las descargas (ignorada en git)
+└── README.md               # 📖 Esta documentación
 ```
-
-> Las descargas del modo web se preparan en carpetas temporales con prefijo
-> `ytdl-` y se eliminan automáticamente después de enviar el archivo.
-
----
-
-## ☁️ Despliegue en la Nube
-
-### Render (Recomendado - incluye ffmpeg)
-
-Render despliega usando el `Dockerfile` que incluye **ffmpeg**, permitiendo descargas completas de video y conversiones de audio.
-
-1. Conecta tu repositorio de GitHub a Render.
-2. Crea un nuevo **Web Service**.
-3. Añade la variable de entorno `YTDLP_COOKIES` con tus cookies de YouTube.
-4. Render construirá la imagen y desplegará automáticamente.
-
-### Vercel
-
-1. Conecta tu repositorio a Vercel.
-2. Añade la variable de entorno `YTDLP_COOKIES`.
-3. Despliega.
-
-**Limitaciones importantes de Vercel:**
-
-- No hay `ffmpeg`, por lo que las conversiones de audio y el merge de video+audio no funcionan.
-- Las funciones serverless tienen un límite de tiempo de ejecución y de tamaño de respuesta
-  (unos 4,5 MB), insuficiente para la mayoría de videos. La descarga puede fallar aunque
-  el análisis de metadatos funcione.
-- Para descargas reales usa **Render**, Docker o un servidor propio.
-
-El `vercel.json` incluye los módulos compartidos (`core.py`, `cookies.py`, `utils.py`,
-`downloader.py`) y las carpetas `templates/` y `static/` para que el despliegue no falle
-con `ModuleNotFoundError`.
 
 ---
 
 ## 🧰 Instalación y ejecución local (recomendado)
 
-1. Crear y activar un entorno virtual:
+1. Clonar el repositorio:
+
+   ```bash
+   git clone https://github.com/alexfloresmorales26-cmyk/-home-alejandro-youtube_downloader.git
+   cd youtube_downloader
+   ```
+
+2. Crear y activar un entorno virtual:
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    ```
 
-2. Instalar dependencias de producción:
+3. Instalar dependencias de producción:
+
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
-3. (Opcional) Configurar cookies para evitar bloqueos de YouTube. Crea un `.env`:
-   ```env
-   YTDLP_COOKIES_FILE=./cookies.txt
-   ```
-   o exporta la variable:
+4. Instalar dependencias de desarrollo (opcional):
+
    ```bash
-   export YTDLP_COOKIES="$(cat cookies.txt)"
+   pip install -r requirements-dev.txt
    ```
 
-4. Ejecutar tests unitarios:
+5. Ejecutar pruebas unitarias:
+
    ```bash
    python -m unittest -v
    ```
 
-5. Ejecutar la aplicación en modo consola (CLI):
+6. Ejecutar en modo consola (CLI):
+
    ```bash
    python main.py
    ```
 
-6. Ejecutar la aplicación como servidor Flask (modo web):
+7. Ejecutar como servidor Flask (modo web):
+
    ```bash
    python app.py
+   # O con gunicorn en producción:
+   gunicorn -b 0.0.0.0:8080 app:app
    ```
-   Abre en tu navegador: `http://localhost:5000`
 
-### 🎨 Regenerar el CSS de Tailwind (solo desarrollo)
+8. Ejecutar en modo escritorio (GUI):
 
-El CSS de Tailwind está precompilado y versionado en `static/css/tailwind.min.css`,
-por lo que producción no necesita Node. Si cambias clases en `templates/` o
-`static/js/`, regenera el archivo:
+   ```bash
+   python gui.py
+   ```
 
-```bash
-npm install
-npm run build:css
+---
+
+## 🖥️ Uso del CLI (`main.py`)
+
+```
+usage: main.py [-h] [-a] [--format {mp3,m4a,wav,flac}] [-r RESOLUTION]
+               [-p] [-t] [-s] [-o OUTPUT] [url]
+
+Argumentos:
+  url                    URL del video o lista de reproducción de YouTube
+  -a, --audio            Descargar únicamente el audio
+  --format               Formato de audio (mp3, m4a, wav, flac) [default: mp3]
+  -r, --resolution       Resolución de video (ej. 1080p, 720p, 480p)
+  -p, --playlist         Indica que la URL es una lista de reproducción
+  -t, --thumbnail        Descargar solo la miniatura
+  -s, --subtitles        Descargar subtítulos
+  -o, --output           Carpeta de destino [default: downloads]
 ```
 
-No edites `static/css/tailwind.min.css` a mano: se genera desde
-`static/css/tailwind.input.css` con la configuración de `tailwind.config.js`.
-Las clases generadas dinámicamente deben escribirse completas en el HTML o en
-`static/js/` para que el escáner de Tailwind las detecte.
+Ejemplos:
 
-### ⚙️ Variables de entorno de rendimiento
+```bash
+# Descargar video en máxima calidad
+python main.py "https://youtu.be/VIDEO_ID"
 
-| Variable | Por defecto | Descripción |
-|---|---|---|
-| `YTDLP_TEMP_DIR` | temporal del sistema | Raíz de las descargas temporales. En local conviene un disco real (por ejemplo `./downloads/.tmp`); en Vercel/Render deja el valor por defecto. |
-| `YTDLP_MAX_CONCURRENT_DOWNLOADS` | `2` | Descargas simultáneas máximas por proceso. |
-| `YTDLP_INFO_CACHE_TTL` | `120` | Segundos que se reutilizan los metadatos. `0` desactiva la caché. |
-| `YTDLP_INFO_CACHE_MAX` | `64` | Número máximo de análisis de metadatos cacheados. |
+# Descargar solo audio en MP3
+python main.py "https://youtu.be/VIDEO_ID" --audio
+
+# Descargar video en 720p
+python main.py "https://youtu.be/VIDEO_ID" -r 720p
+
+# Descargar playlist completa como audio
+python main.py "https://youtube.com/playlist?list=LIST_ID" -p --audio
+```
+
+---
+
+## 🌐 API del Modo Web
+
+Cuando ejecutas `app.py` (o `index.py`), expone dos endpoints JSON:
+
+### `POST /api/info`
+
+Obtiene metadatos de un video o playlist.
+
+**Body:**
+```json
+{ "url": "https://www.youtube.com/watch?v=VIDEO_ID" }
+```
+
+**Respuesta (video):**
+```json
+{
+  "success": true,
+  "is_playlist": false,
+  "title": "Título del video",
+  "uploader": "Canal",
+  "duration": "10:25",
+  "view_count": "1.234.567",
+  "thumbnail": "https://...",
+  "resolutions": ["1080p", "720p", "480p", "360p"]
+}
+```
+
+**Respuesta (playlist):**
+```json
+{
+  "success": true,
+  "is_playlist": true,
+  "title": "Nombre de la playlist",
+  "uploader": "Canal",
+  "total_items": 25,
+  "thumbnail": "https://..."
+}
+```
+
+### `GET/POST /api/download`
+
+Descarga el archivo y lo devuelve como adjunto.
+
+**Parámetros (query o JSON body):**
+- `url`: URL de YouTube (requerida)
+- `type`: `video` | `audio` | `thumbnail` [default: `video`]
+- `quality`: resolución (ej. `1080p`) o formato de audio (`mp3`, `m4a`, `wav`, `flac`) [default: `best`]
+
+**Ejemplo con curl:**
+```bash
+curl -X POST http://localhost:5000/api/download \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://youtu.be/VIDEO_ID","type":"audio","quality":"mp3"}' \
+  --output audio.mp3
+```
+
+---
+
+## ⚙️ Variables de Entorno
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
+| `PORT` | Puerto del servidor web | `5000` |
+| `APP_MODE` | Si es `flask`, usa gunicorn sobre `app:app` | — |
+| `FLASK_APP` | Aplicación Flask | `app.py` |
+| `FLASK_ENV` | Entorno de Flask | `production` |
 
 ---
 
 ## 🐳 Docker (recomendado para despliegue)
 
-Construir la imagen Docker:
+Construir la imagen:
+
 ```bash
 docker build -t youtube-downloader:latest .
 ```
 
-Ejecutar en modo consola (interactivo):
+Ejecutar en modo consola (CLI interactivo):
+
 ```bash
-docker run --rm -it -e YTDLP_COOKIES="$(cat cookies.txt)" youtube-downloader:latest python main.py
+docker run --rm -it youtube-downloader:latest
 ```
 
-Ejecutar en modo Flask (servidor web, puerto 8080):
+Ejecutar en modo servidor web (puerto 8080):
+
 ```bash
-docker run --rm -p 8080:8080 -e YTDLP_COOKIES="$(cat cookies.txt)" youtube-downloader:latest
+docker run --rm -p 8080:8080 -e APP_MODE=flask youtube-downloader:latest
 ```
+
+> **Nota:** ffmpeg ya está instalado en la imagen Docker, por lo que las conversiones de audio y el merge de video+audio funcionan sin configuración extra.
 
 ---
 
-## 🔐 Seguridad
+## ☁️ Despliegue en la Nube
 
-- **No subas** `.env` ni `cookies.txt` al repositorio: contienen credenciales de tu sesión.
-- El `.dockerignore` los excluye de la imagen Docker. Aun así, revisa que no estén
-  presentes en el contexto de construcción si usas otra plataforma.
-- En producción, rota las cookies si sospechas que se han filtrado y no expongas
-  el servicio públicamente sin autenticación si no es necesario.
+### Render
 
-## 🔧 Notas y requisitos del sistema
+1. Sube tu proyecto a GitHub.
+2. En [render.com](https://render.com), crea un nuevo **Web Service**.
+3. Conecta tu repositorio y usa:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn -b 0.0.0.0:10000 app:app`
+   - Variable de entorno: `APP_MODE=flask`
 
-- **ffmpeg** debe estar disponible para habilitar conversiones de audio/video. El Dockerfile ya lo instala.
-- **Cookies de YouTube**: Para descargas desde servidores en la nube, configura `YTDLP_COOKIES` con tu archivo `cookies.txt` para evitar bloqueos de bot.
-- Para que los commits automatizados realizados por los workflows cuenten como tus contributions, asegúrate de que el email del autor de los commits esté asociado a tu cuenta de GitHub.
+También puedes usar el archivo `render.yaml` incluido en el repositorio.
 
-## 🩺 Solución rápida de problemas
+### Railway / Heroku
 
-| Error | Solución |
-|-------|----------|
-| "Sign in to confirm you're not a bot" | Configura `YTDLP_COOKIES` o `YTDLP_COOKIES_FILE` con tus cookies de YouTube |
-| Descarga falla al combinar video y audio | Instala `ffmpeg` en tu sistema |
-| Puerto 5000 ocupado | Inicia con otro puerto: `PORT=8080 python3 app.py` |
-| Cookies expiradas | Renueva las cookies en tu navegador y actualiza la variable de entorno |
-| Las cookies no se detectan | Revisa `/api/cookies-status`; el archivo debe tener formato Netscape (tabuladores) |
-| YouTube cambia y las descargas fallan | Actualiza el motor: `pip install -U yt-dlp` |
-| El navegador descarga un JSON de error | Revisa los logs del servidor; suele ser una URL inválida o cookies caducadas |
+Usa el `Procfile`:
+
+```text
+web: gunicorn -b 0.0.0.0:$PORT app:app
+```
+
+y `runtime.txt`:
+
+```text
+python-3.10
+```
+
+### Vercel
+
+El proyecto incluye `api/index.py` y `vercel.json` para desplegar como función serverless en Vercel.
+
+---
+
+## 🔧 Requisitos del Sistema
+
+- **Python 3.10+**
+- **ffmpeg**: necesario para convertir audio (MP3, M4A, WAV, FLAC) y para combinar video + audio en la máxima calidad. Si no está instalado, la aplicación sigue funcionando con descargas nativas de yt-dlp, pero sin conversiones de formato.
+  - Ubuntu/Debian: `sudo apt install ffmpeg`
+  - macOS: `brew install ffmpeg`
+  - Windows: descarga desde [ffmpeg.org](https://ffmpeg.org/download.html)
+
+---
+
+## 🩺 Solución Rápida de Problemas
+
+| Problema | Solución |
+|----------|----------|
+| Descarga falla al combinar video y audio | Instala `ffmpeg` y vuelve a intentarlo. |
+| Puerto 5000 ocupado | Usa otro puerto: `PORT=8080 python3 app.py`. |
+| Error de conversión de audio | Verifica que ffmpeg esté instalado y en el PATH. |
+| La GUI no abre el navegador | Abre manualmente `http://127.0.0.1:5000` en tu navegador. |
+| Descarga de playlist muy larga | Las playlists se descargan en su propia subcarpeta dentro de `downloads/`. |
+
+---
+
+## 📄 Licencia
+
+Proyecto de código abierto. Diseñado para uso personal y educativo.
+
+---
+
+*Última actualización: noviembre 2026*
